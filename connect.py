@@ -1,4 +1,5 @@
 import numpy as np
+import itertools
 
 class Connect:
     def __init__(self, columns: int, rows: int, win_length: int):
@@ -6,14 +7,19 @@ class Connect:
         self.columns = columns
         self.rows = rows
         self.win_length = win_length
-        self.current_player = 1  # Start with player 1
 
-    def make_move(self, column: int) -> bool:
+    def make_move(self, column: int, player: str) -> bool:
         if column < 0 or column >= self.columns:
-            return False
+            raise Exception("Invalid column")
         for row in range(self.rows):
-            if self.board[row][column] is None:
-                self.board[row][column] = self.current_player
+            if self.board[column][row] is None:
+                self.board[column][row] = player
+                return True
+        raise Exception("Column is full")
+    
+    def check_win(self) -> bool:
+        for x, y in itertools.product(range(self.columns), range(self.rows)):
+            if self.check_win_at_position(x, y):
                 return True
         return False
     
@@ -50,46 +56,12 @@ class Connect:
             return True
         return False
             
-    def check_win_2(self) -> bool:
-        # temp_board= np.pad(self.board, pad_width=self.win_length, mode='constant', constant_values=Player.EMPTY)
-        # new_x = x + self.win_length
-        # new_y = y + self.win_length
-        for row in range(self.rows):
-            for column in range(self.columns):
-                if self.board[row][column] is not None:
-                    if self.check_win_direction(column, row, 1, 0):
-                        return True
-                    if self.check_win_direction(column, row, 0, 1):
-                        return True
-                    if self.check_win_direction(column, row, 1, 1):
-                        return True
-                    if self.check_win_direction(column, row, 1, -1):
-                        return True
-
-        return False
-
-    def check_win_direction(self, column: int, row: int, delta_column: int, delta_row: int) -> bool:
-        for i in range(1, self.win_length):
-            new_row = row + i * delta_row
-            new_column = column + i * delta_column
-
-            if new_row < 0 or new_row >= self.rows or new_column < 0 or new_column >= self.columns:
-                return False
-
-            if self.board[new_row][new_column] != self.board[row][column]:
-                return False
-
-        return True
-
-    def switch_player(self):
-        self.current_player = 1 if self.current_player == 0 else 0
-
     @staticmethod
     def beautify_transformation(val):
         if val == 1:
-            return "P_1"
+            return "  1  "
         elif val == 0:
-            return "P_2"
+            return "  2  "
         else:
             return "EMPTY"
 
