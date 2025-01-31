@@ -102,7 +102,8 @@ class ConnectXVisual:
             self.game.make_move(column, self.player)
             if self.game.check_win():
                 self.update_board()
-                self.result_label.config(text=f"{self.player} wins!")
+                winner_color = "red" if self.player == self.agent_1_name else "yellow"
+                self.result_label.config(text=f"{self.player} wins!", font=("Helvetica", 24), fg=winner_color)
                 for col in range(self.game.columns):
                     for row in range(self.game.rows):
                         self.cells[col][row].config(bg="light green")
