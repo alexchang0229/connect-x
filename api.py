@@ -12,6 +12,7 @@ Implement the following functions:
 
 import numpy as np
 
+
 def get_name():
     pass
 

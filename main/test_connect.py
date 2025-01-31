@@ -1,5 +1,7 @@
 import pytest
-from main.connect import Connect
+from main.connect import Connect, ConnectTesta
+import tkinter as tk
+import random
 
 @pytest.fixture
 def game():
@@ -106,3 +108,31 @@ def test_corner_win(game):
         if col < 3:
             assert not game.check_win()
     assert game.check_win()
+
+def agent_1(board, win_length):
+    # Simple agent that always picks the first available column
+    for col in range(board.shape[0]):
+        if board[col][0] is None:
+            return col
+
+def agent_2(board, win_length):
+    # Simple agent that always picks the last available column
+    for col in range(board.shape[0] - 1, -1, -1):
+        if board[col][0] is None:
+            return col
+
+def random_agent_1(board, win_length):
+    # Random agent that picks a random column
+    return random.randint(0, board.shape[0] - 1)
+
+def random_agent_2(board, win_length):
+    # Random agent that picks a random column
+    return random.randint(0, board.shape[0] - 1)
+
+def test_play_game():
+    test = ConnectTesta("Agent 1", agent_1, "Agent 2", agent_2)
+    test.play_game_with_visual(columns=7, rows=6, win_length=4, starter="Agent 1")
+
+def test_play_automatic_game():
+    test = ConnectTesta("Random Agent 1", random_agent_1, "Random Agent 2", random_agent_2)
+    test.play_automatic_game_with_visual(columns=7, rows=6, win_length=4, starter="Random Agent 1", time_between_moves=1000)
