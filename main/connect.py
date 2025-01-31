@@ -24,6 +24,8 @@ class Connect:
         for x, y in itertools.product(range(self.columns), range(self.rows)):
             if self.check_win_at_position(x, y):
                 return True
+        if all(self.board[col][0] is not None for col in range(self.columns)):
+            raise Exception("The game is a draw. All columns are full.")
         return False
     
     def check_win_at_position(self, x, y) -> bool:
@@ -115,6 +117,9 @@ class ConnectXVisual:
             self.update_board()
         except Exception as e:
             self.result_label.config(text=str(e))
+            self.game_over = True
+            for button in self.buttons:
+                button.config(state=tk.DISABLED)
 
     def setup(self):
         self.root = tk.Tk()
