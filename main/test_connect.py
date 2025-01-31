@@ -135,4 +135,4 @@ def test_play_game():
 
 def test_play_automatic_game():
     test = ConnectTesta("Random Agent 1", random_agent_1, "Random Agent 2", random_agent_2)
-    test.play_automatic_game_with_visual(columns=7, rows=6, win_length=4, starter="Random Agent 1", time_between_moves=1000)
+    test.play_automatic_game_with_visual(columns=7, rows=6, win_length=4, starter="Random Agent 1", seconds_between_moves=1000)

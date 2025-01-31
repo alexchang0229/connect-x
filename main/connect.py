@@ -189,7 +189,8 @@ class ConnectTesta:
         visual.setup()
         visual.manual_start()
 
-    def play_automatic_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str, time_between_moves: int):
+    def play_automatic_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str, seconds_between_moves: int):
+        milliseconds_between_moves = seconds_between_moves * 1000
         game = Connect(columns, rows, win_length)
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
-        visual.automatic_start(self.agent_1_func, self.agent_2_func, time_between_moves)
+        visual.automatic_start(self.agent_1_func, self.agent_2_func, milliseconds_between_moves)
