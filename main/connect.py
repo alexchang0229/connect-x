@@ -57,18 +57,16 @@ class Connect:
         return False
             
     @staticmethod
-    def beautify_transformation(val):
-        if val == 1:
-            return "  1  "
-        elif val == 0:
-            return "  2  "
+    def beautify_transformation(val: str):
+        if val is None:
+            return "____"
+        elif len(val) < 4:
+            return val.ljust(4, ' ')
         else:
-            return "EMPTY"
+            return val[:4]
 
     def __str__(self):
         vectorized_transform = np.vectorize(self.beautify_transformation)
         arr = vectorized_transform(self.board)
-        return str(arr)
-    
-# def play(game: np.Array) -> int:
-#     game.board[0, 0] -> 1, 0, None
+        rotated_arr = np.rot90(arr)
+        return str(rotated_arr)

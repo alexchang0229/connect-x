@@ -1,5 +1,5 @@
 import pytest
-from connect import Connect
+from main.connect import Connect
 
 @pytest.fixture
 def game():
@@ -8,18 +8,21 @@ def game():
 def test_horizontal_win(game):
     # Simulate a horizontal win
     for col in range(4):
+        assert not game.check_win()
         game.make_move(col, 'X')
     assert game.check_win()
 
 def test_vertical_win(game):
     # Simulate a vertical win
     for row in range(4):
+        assert not game.check_win()
         game.make_move(0, 'X')
     assert game.check_win()
 
 def test_diagonal_win(game):
     # Simulate a diagonal win
     for i in range(4):
+        assert not game.check_win()
         for j in range(i):
             game.make_move(i, 'O')
         game.make_move(i, 'X')
@@ -76,14 +79,14 @@ def test_corner_win(game):
     # Simulate columns win in the top-left corner
     game = Connect(columns=7, rows=6, win_length=4)
     for row in range(4):
-        game.make_move(0, 'X')
+        game.board[0][-1-row] = 'X'
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the top-left corner
     game = Connect(columns=7, rows=6, win_length=4)
     for col in range(4):
-        game.make_move(col, 'X')
+        game.board[col][-1] = 'X'
         if col < 3:
             assert not game.check_win()
     assert game.check_win()
@@ -92,14 +95,14 @@ def test_corner_win(game):
     # Simulate columns win in the top-right corner
     game = Connect(columns=7, rows=6, win_length=4)
     for row in range(4):
-        game.make_move(game.columns - 1, 'X')
+        game.board[-1][-1-row] = 'X'
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the top-right corner
     game = Connect(columns=7, rows=6, win_length=4)
     for col in range(4):
-        game.make_move(game.columns - 1 - col, 'X')
+        game.board[-1-col][-1] = 'X'
         if col < 3:
             assert not game.check_win()
     assert game.check_win()
