@@ -139,7 +139,7 @@ class ConnectXVisual:
     def manual_start(self):
         self.root.mainloop()
 
-    def automatic_start(self, agent_1_func: Callable, agent_2_func: Callable, time_between_moves: int):
+    def automatic_timed_start(self, agent_1_func: Callable, agent_2_func: Callable, time_between_moves: int):
         def play_next_move():
             if self.game_over:
                 return
@@ -195,8 +195,27 @@ class ConnectTesta:
         visual.setup()
         visual.manual_start()
 
+    
+
     def play_automatic_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str, seconds_between_moves: int):
         milliseconds_between_moves = seconds_between_moves * 1000
         game = Connect(columns, rows, win_length)
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
-        visual.automatic_start(self.agent_1_func, self.agent_2_func, milliseconds_between_moves)
+        visual.automatic_timed_start(self.agent_1_func, self.agent_2_func, milliseconds_between_moves)
+
+    def play_step_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str):
+        game = Connect(columns, rows, win_length)
+        visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
+        visual.setup()
+        
+        def play_next_move():
+            if game.check_win():
+                return
+            player = self.agent_1_name if visual.player == self.agent_1_name else self.agent_2_name
+            column = self.agent_1_func(game.board, win_length) if player == self.agent_1_name else self.agent_2_func(game.board, win_length)
+            visual.make_move_and_update(column)
+        
+        continue_button = tk.Button(visual.root, text="Continue", command=play_next_move)
+        continue_button.grid(row=game.rows + 2, columnspan=game.columns)
+        
+        visual.manual_start()
