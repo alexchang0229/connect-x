@@ -24,7 +24,7 @@ class Connect:
         for x, y in itertools.product(range(self.columns), range(self.rows)):
             if self.check_win_at_position(x, y):
                 return True
-        if all(self.board[col][0] is not None for col in range(self.columns)):
+        if all(all(self.board[col][row] is not None for row in range(self.rows)) for col in range(self.columns)):
             raise Exception("The game is a draw. All columns are full.")
         return False
     
@@ -102,8 +102,8 @@ class ConnectXVisual:
             return
         try:
             self.game.make_move(column, self.player)
+            self.update_board()
             if self.game.check_win():
-                self.update_board()
                 winner_color = "red" if self.player == self.agent_1_name else "yellow"
                 self.result_label.config(text=f"{self.player} wins!", font=("Helvetica", 24), fg=winner_color)
                 for col in range(self.game.columns):
@@ -114,7 +114,6 @@ class ConnectXVisual:
                     button.config(state=tk.DISABLED)
                 return
             self.player = self.agent_1_name if self.player == self.agent_2_name else self.agent_2_name
-            self.update_board()
         except Exception as e:
             self.result_label.config(text=str(e))
             self.game_over = True
@@ -155,6 +154,7 @@ class ConnectXVisual:
         self.setup()
         self.root.after(time_between_moves, play_next_move)
         self.root.mainloop()
+
 
 class ConnectTesta:
     def __init__(self, agent_1_name: str, agent_1_func: Callable, agent_2_name: str, agent_2_func: Callable):
