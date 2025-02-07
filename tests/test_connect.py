@@ -138,7 +138,7 @@ def random_agent_2(board, win_length):
 
 def test_play_game():
     test = ConnectTesta("Agent 1", agent_1, "Agent 2", agent_2)
-    test.play_game_with_visual(columns=2, rows=2, win_length=4, starter="Agent 1")
+    test.play_game_with_visual(columns=7, rows=6, win_length=4, starter="Agent 1")
 
 def test_play_automatic_game():
     test = ConnectTesta("Random Agent 1", random_agent_1, "Random Agent 2", random_agent_2)

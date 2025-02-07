@@ -6,7 +6,7 @@ from typing import Callable
 
 class Connect:
     def __init__(self, columns: int, rows: int, win_length: int):
-        self.board = np.full((columns, rows), None)
+        self. board = np.full((columns, rows), None)
         self.columns = columns
         self.rows = rows
         self.win_length = win_length
@@ -14,7 +14,7 @@ class Connect:
     def make_move(self, column: int, player: str) -> bool:
         if column < 0 or column >= self.columns:
             raise Exception("Invalid column")
-        for row in range(self.rows):
+        for row in range(0, self.rows):  # Start from the bottom row
             if self.board[column][row] is None:
                 self.board[column][row] = player
                 return True
@@ -91,7 +91,9 @@ class ConnectXVisual:
             for row in range(self.game.rows):
                 value = self.game.board[col][row]
                 color = "white" if value is None else ("red" if value == self.agent_1_name else "yellow")
-                canvas = self.cells[col][row]
+                x = col
+                y = self.game.rows - row - 1  # Invert the row index
+                canvas = self.cells[x][y]
                 canvas.delete("all")
                 if value is not None:
                     canvas.create_oval(5, 5, self.width-5, self.height-5, fill=color)
@@ -193,9 +195,7 @@ class ConnectTesta:
         game = Connect(columns, rows, win_length)
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
         visual.setup()
-        visual.manual_start()
-
-    
+        visual.manual_start()  
 
     def play_automatic_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str, seconds_between_moves: int):
         milliseconds_between_moves = seconds_between_moves * 1000
@@ -208,7 +208,7 @@ class ConnectTesta:
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
         visual.setup()
         
-        def play_next_move():
+        def play_next_move(event=None):
             if game.check_win():
                 return
             player = self.agent_1_name if visual.player == self.agent_1_name else self.agent_2_name
@@ -217,5 +217,7 @@ class ConnectTesta:
         
         continue_button = tk.Button(visual.root, text="Continue", command=play_next_move)
         continue_button.grid(row=game.rows + 2, columnspan=game.columns)
+        
+        visual.root.bind('<Return>', play_next_move)
         
         visual.manual_start()
