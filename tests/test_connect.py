@@ -40,12 +40,19 @@ class TestConnectXMatch:
         assert game.winner is "X"
         assert game.previous_player_who_played is 'O'
 
-        # Play None or string
+        # Play None
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
-        with pytest.raises(Exception):
-            game.make_move(0, None)
-        with pytest.raises(Exception):
-            game.make_move(0, "string")
+        game.make_move(None, "X")
+        assert game.game_state == GameState.ILLEGAL_MOVE
+        assert game.winner is "O"
+        assert game.previous_player_who_played is 'X'
+
+        # Play String
+        game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
+        game.make_move("string", "X")
+        assert game.game_state == GameState.ILLEGAL_MOVE
+        assert game.winner is "O"
+        assert game.previous_player_who_played is 'X'
 
 
     def test_horizontal_win(self, game: ConnectXMatch):
@@ -261,15 +268,18 @@ class TestConnectXMatch:
 
 def agent_first_column(board, win_length):
     # Simple agent that always picks the first available column
+    return 0
+def agent_last_column(board, win_length):
+    # Simple agent that always picks the last available column
+    return board.shape[0] - 1
+        
+def agent_empty(board, win_length):
+    # Finds the first empty column and plays there
+    # Otherwise random
     for col in range(board.shape[0]):
         if board[col][0] is None:
             return col
-
-def agent_last_column(board, win_length):
-    # Simple agent that always picks the last available column
-    for col in range(board.shape[0] - 1, -1, -1):
-        if board[col][0] is None:
-            return col
+    return random.randint(0, board.shape[0] - 1)
 
 def random_agent_1(board, win_length):
     # Random agent that picks a random column
@@ -281,7 +291,6 @@ def random_agent_2(board, win_length):
 
 
 class TestConnectXMatchWithAgents:
-
     def test_play_move_with_agent(self):
         match: ConnectXMatchWithAgents = ConnectXMatchWithAgents(
             7,
@@ -356,6 +365,97 @@ class TestConnectXMatchWithAgents:
             5
         )
         assert match.play_full_game() == "agent_2"
+
+
+
+
+
+
+class TestConnectXMatchup:
+    def test_play_matchup(self):
+        ### Player 1 wins
+        matchup: ConnectXMatchup = ConnectXMatchup(
+            7,
+            6,
+            4,
+            "agent_1", 
+            "agent_2",
+            agent_first_column, 
+            agent_empty,
+            5,
+            10,
+            10
+        )
+        # Before
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins is None
+        assert matchup.percentage_second_player_wins is None
+        assert matchup.percentage_draws is None
+        assert matchup.winner is None
+        # Play the matchup
+        matchup.play_matchup()
+        # After
+        assert matchup.first_player_wins == 10
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 100.0
+        assert matchup.percentage_second_player_wins == 0.0
+        assert matchup.percentage_draws == 0.0
+        assert matchup.winner is "agent_1"
+
+        ### Equal strats
+        matchup: ConnectXMatchup = ConnectXMatchup(
+            7,
+            6,
+            4,
+            "agent_1", 
+            "agent_2",
+            agent_first_column, 
+            agent_last_column,
+            5,
+            10,
+            10
+        )
+        # Before
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins is None
+        assert matchup.percentage_second_player_wins is None
+        assert matchup.percentage_draws is None
+        assert matchup.winner is None
+        # Play the matchup
+        matchup.play_matchup()
+        # After
+        assert matchup.first_player_wins == 5
+        assert matchup.second_player_wins == 5
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 50.0
+        assert matchup.percentage_second_player_wins == 50.0
+        assert matchup.percentage_draws == 0.0
+        assert matchup.winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
+
+    def test_generate_report(self):
+        matchup: ConnectXMatchup = ConnectXMatchup(
+            7,
+            6,
+            4,
+            "agent_1", 
+            "agent_2",
+            agent_first_column, 
+            agent_last_column,
+            5,
+            10,
+            10
+        )
+        # Play the matchup
+        matchup.play_matchup()
+        # Generate the report
+        matchup.generate_report("test_report.txt")      
+
+
 
 if __name__ == "__main__":
     unittest.main()

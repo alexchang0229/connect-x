@@ -329,16 +329,26 @@ class ConnectXMatchup:
         self.percentage_draws: float = None
         self.winner: str = None
 
+    def switch_players(self, current_player: str):
+        if current_player == self.first_player_name:
+            return self.second_player_name, self.second_player_func, self.first_player_name, self.first_player_func
+        return self.first_player_name, self.first_player_func, self.second_player_name, self.second_player_func
+
+
     def play_matchup(self) -> str:
+        current_player: str = self.first_player_name
+        current_player_function: Callable = self.first_player_func
+        opponent_player: str = self.second_player_name
+        opponent_player_function: Callable = self.second_player_func
         for _ in range(self.number_of_games):
             game = ConnectXMatchWithAgents(
                 self.columns,
                 self.rows,
                 self.win_length,
-                self.first_player_name,
-                self.second_player_name,
-                self.first_player_func,
-                self.second_player_func,
+                current_player,
+                opponent_player,
+                current_player_function,
+                opponent_player_function,
                 self.time_limit
             )
             winner = game.play_full_game()
@@ -352,12 +362,13 @@ class ConnectXMatchup:
                     self.saved_player_2_games.append(game.game)
             else:
                 self.draws += 1
+            current_player, current_player_function, opponent_player, opponent_player_function = self.switch_players(current_player)
         return self.analyse_matchup(self.first_player_wins, self.second_player_wins, self.draws)
     
     def analyse_matchup(self, first_player_wins, second_player_wins, draws):
-        self.percentage_first_player_wins: float = first_player_wins / (first_player_wins + second_player_wins + draws)
-        self.percentage_second_player_wins: float = second_player_wins / (first_player_wins + second_player_wins + draws)
-        self.percentage_draws: float = draws / (first_player_wins + second_player_wins + draws)
+        self.percentage_first_player_wins: float = (first_player_wins / (first_player_wins + second_player_wins + draws)) * 100
+        self.percentage_second_player_wins: float = (second_player_wins / (first_player_wins + second_player_wins + draws)) * 100
+        self.percentage_draws: float = (draws / (first_player_wins + second_player_wins + draws)) * 100
         # Decide the winner, if winner there is.
         self.winner: str = self.determine_winner()
         return self.winner
@@ -393,12 +404,12 @@ class ConnectXMatchup:
             f"Second Player: {self.second_player_name}",
             f"Number of Games: {self.number_of_games}",
             f"Time Limit: {self.time_limit} seconds",
-            f"Win Percentage Threshold for Win: {self.win_percentage_threshold_for_win:.2%}",
+            f"Win Percentage Threshold for Win: {self.win_percentage_threshold_for_win}",
             "",
             "Results:",
-            f"First Player Wins: {self.first_player_wins} ({self.percentage_first_player_wins:.2%})",
-            f"Second Player Wins: {self.second_player_wins} ({self.percentage_second_player_wins:.2%})",
-            f"Draws: {self.draws} ({self.percentage_draws:.2%})",
+            f"First Player Wins: {self.first_player_wins} ({self.percentage_first_player_wins})",
+            f"Second Player Wins: {self.second_player_wins} ({self.percentage_second_player_wins})",
+            f"Draws: {self.draws} ({self.percentage_draws})",
             "",
             f"Winner: {self.winner}",
             "========================"
