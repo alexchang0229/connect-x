@@ -153,6 +153,7 @@ class ConnectXMatch:
         for row in range(0, self.ROWS):
             if self.board[column][row] is None:
                 self.board[column][row] = player
+                break
         # UPDATE STATE FOR WIN
         if self.check_win():
             self.game_state = GameState.WIN
@@ -401,66 +402,75 @@ class ConnectXMatchup:
 
 
 class ConnectXVisual:
-    def __init__(self, game: ConnectXMatch, agent_1_name: str, agent_2_name: str):
-        self.game = game
-        self.agent_1_name = agent_1_name
-        self.agent_2_name = agent_2_name
-        self.player = agent_1_name
-        self.width = 100
-        self.height = 100
+    def __init__(
+        self,
+        columns: int,
+        rows: int,
+        win_length: int,
+        width=100,
+        height=100
+    ):
+        self.columns: int = columns
+        self.rows: int = rows
+        self.win_length: int = win_length
+        self.width = width
+        self.height = height
         self.game_over = False
 
-    def update_board(self):
-        for col in range(self.game.COLUMNS):
-            for row in range(self.game.ROWS):
-                value = self.game.board[col][row]
+    def update_board(self, match: ConnectXMatch):
+        for col in range(match.COLUMNS):
+            for row in range(match.ROWS):
+                value = match.board[col][row]
                 color = "white" if value is None else ("red" if value == self.agent_1_name else "yellow")
                 x = col
-                y = self.game.ROWS - row - 1  # Invert the row index
+                y = match.ROWS - row - 1  # Invert the row index
                 canvas = self.cells[x][y]
                 canvas.delete("all")
                 if value is not None:
                     canvas.create_oval(5, 5, self.width-5, self.height-5, fill=color)
                     canvas.create_text(self.width/2, self.height/2, text=value, fill="black")
 
-    def make_move_and_update(self, column):
-        if self.game_over:
-            return
-        try:
-            self.game.make_move(column, self.player)
-            self.update_board()
-            if self.game.check_win():
-                winner_color = "red" if self.player == self.agent_1_name else "yellow"
-                self.result_label.config(text=f"{self.player} wins!", font=("Helvetica", 24), fg=winner_color)
-                for col in range(self.game.COLUMNS):
-                    for row in range(self.game.ROWS):
-                        self.cells[col][row].config(bg="light green")
-                self.game_over = True
-                for button in self.buttons:
-                    button.config(state=tk.DISABLED)
-                return
-            self.player = self.agent_1_name if self.player == self.agent_2_name else self.agent_2_name
-        except Exception as e:
-            self.result_label.config(text=str(e))
+        if match.game_state == GameState.WIN:
+            winner_color = "red" if self.player == self.agent_1_name else "yellow"
+            self.result_label.config(text=f"{self.player} wins!", font=("Helvetica", 24), fg=winner_color)
+            for col in range(match.COLUMNS):
+                for row in range(match.ROWS):
+                    self.cells[col][row].config(bg="light green")
+            self.game_over = True
+            for button in self.buttons:
+                button.config(state=tk.DISABLED)
+        elif match.game_state in [GameState.ILLEGAL_MOVE, GameState.TIME_LIMIT_EXCEEDED]:
+            for col in range(match.COLUMNS):
+                for row in range(match.ROWS):
+                    self.cells[col][row].config(bg="red")
+            self.result_label.config(text=f"{match.winner} wins! {self.player} lost due to {'illegal move' if match.game_state == GameState.ILLEGAL_MOVE else 'time limit exceeded'}.", font=("Helvetica", 24), fg="red")
+            self.game_over = True
+            for button in self.buttons:
+                button.config(state=tk.DISABLED)
+        elif match.game_state == GameState.DRAW:
+            for col in range(match.COLUMNS):
+                for row in range(match.ROWS):
+                    self.cells[col][row].config(bg="yellow")
+            self.result_label.config(text="The game is a draw. No winners.", font=("Helvetica", 24), fg="yellow")
             self.game_over = True
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
 
-    def setup(self):
+    def setup(self, button_method: Callable):
         self.root = tk.Tk()
         self.root.title("Connect X")
 
-        self.cells = [[tk.Canvas(self.root, width=100, height=100, bg="white", borderwidth=2, relief="groove") for _ in range(self.game.ROWS)] for _ in range(self.game.COLUMNS)]
-        for col in range(self.game.COLUMNS):
-            for row in range(self.game.ROWS):
+        self.cells = [[tk.Canvas(self.root, width=100, height=100, bg="white", borderwidth=2, relief="groove") for _ in range(self.rows)] for _ in range(self.columns)]
+        for col in range(self.columns):
+            for row in range(self.rows):
                 self.cells[col][row].grid(row=row, column=col)
 
-        self.buttons = [tk.Button(self.root, text=f"Drop {col+1}", command=lambda col=col: self.make_move_and_update(col)) for col in range(self.game.COLUMNS)]
+        self.buttons = [tk.Button(self.root, text=f"Drop {col+1}", command=lambda col=col: button_method(col)) for col in range(self.columns)]
         for col, button in enumerate(self.buttons):
-            button.grid(row=self.game.ROWS, column=col)
+            button.grid(row=self.rows, column=col)
 
         self.result_label = tk.Label(self.root, text="")
-        self.result_label.grid(row=self.game.ROWS+1, columnspan=self.game.COLUMNS)
+        self.result_label.grid(row=self.rows+1, columnspan=self.columns)
 
     def manual_start(self):
         self.root.mainloop()
@@ -473,87 +483,66 @@ class ConnectXVisual:
                 column = agent_1_func(self.game.board, self.game.WIN_LENGTH)
             else:
                 column = agent_2_func(self.game.board, self.game.WIN_LENGTH)
-            self.make_move_and_update(column)
+            self.play_with_next_player(column)
             if not self.game_over:
                 self.root.after(time_between_moves, play_next_move)
 
-        self.setup()
+        self.setup(self.play_with_next_player)
         self.root.after(time_between_moves, play_next_move)
         self.root.mainloop()
 
-
-class ConnectTesta:
-    def __init__(self, agent_1_name: str, agent_1_func: Callable, agent_2_name: str, agent_2_func: Callable):
-        self.agent_1_name: str = agent_1_name
-        self.agent_1_func: Callable = agent_1_func
-        self.agent_2_name: str = agent_2_name
-        self.agent_2_func: Callable = agent_2_func
-        
-    def play_game(self, columns: int, rows: int, win_length: int, starter: str):
+    def play_real_time_game(self, agent_1_name: str, agent_1_func: Callable, agent_2_name: str, agent_2_func: Callable, time_limit: int):
         """
-        Play a game of Connect X between two agents.
+        Play a real-time game between two agents.
 
         Args:
-            columns (int): Number of columns in the game board.
-            rows (int): Number of rows in the game board.
-            win_length (int): Number of consecutive pieces needed to win.
-            starter (str): Name of the agent who starts the game.
-
-        Returns:
-            str: Name of the winning agent.
+            agent_1_name (str): Name of the first agent.
+            agent_1_func (Callable): Function for the first agent.
+            agent_2_name (str): Name of the second agent.
+            agent_2_func (Callable): Function for the second agent.
+            time_limit (int): Time limit for each move in seconds.
         """
-        game = ConnectXMatch(columns, rows, win_length)
-        player = starter
-        while not game.check_win():
-            if player == self.agent_1_name:
-                column = self.agent_1_func(game.board, win_length)
-            else:
-                column = self.agent_2_func(game.board, win_length)
-            game.make_move(column, player)
-            player = self.agent_1_name if player == self.agent_2_name else self.agent_2_name
-        return player
-    
-    def play_game_with_print(self, columns: int, rows: int, win_length: int, starter: str):
-        game = ConnectXMatch(columns, rows, win_length)
-        player = starter
-        while not game.check_win():
-            print(game)
-            if player == self.agent_1_name:
-                column = self.agent_1_func(game.board, win_length)
-            else:
-                column = self.agent_2_func(game.board, win_length)
-            game.make_move(column, player)
-            player = self.agent_1_name if player == self.agent_2_name else self.agent_2_name
-        print(game)
-        return player
-    
-    def play_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str):
-        game = ConnectXMatch(columns, rows, win_length)
-        visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
-        visual.setup()
-        visual.manual_start()  
+        self.game = ConnectXMatchWithAgents(
+            self.columns,
+            self.rows,
+            self.win_length,
+            agent_1_name,
+            agent_2_name,
+            agent_1_func,
+            agent_2_func,
+            time_limit
+        )
 
-    def play_automatic_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str, seconds_between_moves: int):
-        milliseconds_between_moves = seconds_between_moves * 1000
-        game = ConnectXMatch(columns, rows, win_length)
-        visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
-        visual.automatic_timed_start(self.agent_1_func, self.agent_2_func, milliseconds_between_moves)
+        def play_next_move():
+            if self.game.game.game_state == GameState.IN_PROGRESS:
+                self.game.play_move_with_next_agent()
+                self.update_board(self.game.game)
+                self.root.after(time_limit * 1000, play_next_move)
 
-    def play_step_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str):
-        game = ConnectXMatch(columns, rows, win_length)
-        visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
-        visual.setup()
-        
-        def play_next_move(event=None):
-            if game.check_win():
+        self.setup(self.play_with_next_player)
+        self.root.after(time_limit * 1000, play_next_move)
+        self.root.mainloop()
+
+    def play_manual_game(self, agent_1_name: str, agent_2_name: str):
+        """
+        Play a manual game between two agents.
+
+        Args:
+            agent_1_name (str): Name of the first agent.
+            agent_2_name (str): Name of the second agent.
+        """
+        self.game = ConnectXMatch(self.columns, self.rows, self.win_length, agent_1_name, agent_2_name)
+        self.agent_1_name = agent_1_name
+        self.agent_2_name = agent_2_name
+        self.player = agent_1_name
+
+        def play_next_move(column):
+            if self.game_over:
                 return
-            player = self.agent_1_name if visual.player == self.agent_1_name else self.agent_2_name
-            column = self.agent_1_func(game.board, win_length) if player == self.agent_1_name else self.agent_2_func(game.board, win_length)
-            visual.make_move_and_update(column)
-        
-        continue_button = tk.Button(visual.root, text="Continue", command=play_next_move)
-        continue_button.grid(row=game.ROWS + 2, columnspan=game.COLUMNS)
-        
-        visual.root.bind('<Return>', play_next_move)
-        
-        visual.manual_start()
+            self.game.play_with_next_player(column)
+            self.update_board(self.game)
+            if self.game.game_state in [GameState.WIN, GameState.ILLEGAL_MOVE, GameState.TIME_LIMIT_EXCEEDED, GameState.DRAW]:
+                self.game_over = True
+
+        self.setup(play_next_move)
+        self.manual_start()

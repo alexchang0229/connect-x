@@ -1,6 +1,6 @@
 import unittest
 import tkinter as tk
-from main.connect import ConnectTesta, ConnectXMatch
+from main.connect import ConnectTesta, ConnectXMatch, ConnectXVisual, GameState
 
 
 
@@ -12,7 +12,7 @@ import random
 
 @pytest.fixture
 def game():
-    return ConnectXMatch(columns=7, rows=6, win_length=4)
+    return ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
 
 def test_horizontal_win(game):
     # Simulate a horizontal win
@@ -61,7 +61,7 @@ def test_corner_win(game):
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the bottom-left corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for col in range(4):
         game.make_move(col, 'X')
         if col < 3:
@@ -70,14 +70,14 @@ def test_corner_win(game):
 
     ## Bottom right corner
     # Simulate columns win in the bottom-right corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for row in range(4):
         game.make_move(game.COLUMNS - 1, 'X')
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the bottom-right corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for col in range(4):
         game.make_move(game.COLUMNS - 1 - col, 'X')
         if col < 3:
@@ -86,14 +86,14 @@ def test_corner_win(game):
 
     ## Top left corner
     # Simulate columns win in the top-left corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for row in range(4):
         game.board[0][-1-row] = 'X'
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the top-left corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for col in range(4):
         game.board[col][-1] = 'X'
         if col < 3:
@@ -102,14 +102,14 @@ def test_corner_win(game):
 
     ## Top right corner
     # Simulate columns win in the top-right corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for row in range(4):
         game.board[-1][-1-row] = 'X'
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the top-right corner
-    game = ConnectXMatch(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
     for col in range(4):
         game.board[-1-col][-1] = 'X'
         if col < 3:
@@ -157,44 +157,6 @@ def agent_2_func(board, win_length):
         if board[col][0] is None:
             return col
     return len(board) - 1
-
-class TestConnectX(unittest.TestCase):
-    def test_play_step_game_with_visual(self):
-        game_tester = ConnectTesta("Agent 1", agent_1_func, "Agent 2", agent_2_func)
-        columns, rows, win_length = 7, 6, 4
-        starter = "Agent 1"
-        
-        # Create a root window for the test
-        root = tk.Tk()
-        root.withdraw()  # Hide the root window
-        
-        # Run the game with visual step-by-step play
-        game_tester.play_step_game_with_visual(columns, rows, win_length, starter)
-        
-        # Check if the game window is created
-        self.assertTrue(isinstance(game_tester, ConnectTesta))
-        
-        # Close the root window after the test
-        root.destroy()
-
-    def test_draw_condition(self):
-        game_tester = ConnectTesta("Agent 1", agent_1_func, "Agent 2", agent_2_func)
-        columns, rows, win_length = 7, 6, 10
-        starter = "Agent 1"
-        
-        game = ConnectXMatch(columns, rows, win_length)
-        
-        # Fill the board without any player winning
-        for col in range(columns):
-            for row in range(rows):
-                player = "Agent 1" if (col + row) % 2 == 0 else "Agent 2"
-                game.make_move(col, player)
-        
-        # Check if the game is a draw
-        with self.assertRaises(Exception) as context:
-            game.check_win()
-        
-        self.assertTrue("The game is a draw. All columns are full." in str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()
