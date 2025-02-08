@@ -66,7 +66,7 @@ class ConnectXMatch:
             raise Exception(f"Error, tried to play while in terminal state. Cannot play in game state: {self.game_state}")
         # Check if the column is valid.
         if column < 0 or column >= self.COLUMNS:
-            return GameState.ILLEGAL_MOVE
+            return GameState.ILLEGAL_MOVE, "Played outside of the board."
         # Check if the column is already full before move.
         for row in range(0, self.ROWS):
             if self.board[column][row] is None:
@@ -143,7 +143,7 @@ class ConnectXMatch:
         if state == GameState.ILLEGAL_MOVE:
             # Update state
             self.game_state = state
-            self.winner = self.previous_player_who_played
+            self.winner = self.get_other_player(player)
             self.previous_player_who_played = player
             self.log.append(message)
             self.log.append(f"Player {player} tried to play in full column {column} and lost.")
