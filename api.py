@@ -155,7 +155,7 @@ def columnator(board, win_length):
     if "columnator" not in board:
         # random for first move
         return random.randint(0, board.shape[0] - 1)
-    print(win_blocker(board))
+    #print(win_blocker(board))
 
     column_counts = []
     for col_ind, column in enumerate(board):
