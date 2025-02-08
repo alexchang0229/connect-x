@@ -1,15 +1,20 @@
 import numpy as np
 import itertools
 import tkinter as tk
+from enum import Enum
+from typing import Tuple, List, Callable
+import threading
 
 from typing import Callable
 
-class Connect:
-    def __init__(self, columns: int, rows: int, win_length: int):
-        self. board = np.full((columns, rows), None)
-        self.columns = columns
-        self.rows = rows
-        self.win_length = win_length
+class GameState(str, Enum):
+    """
+    Enum representing the possible states of a Connect X game.
+    """
+    DRAW = "DRAW"
+    WIN = "WIN"
+    IN_PROGRESS = "IN_PROGRESS"
+    ILLEGAL_MOVE = "ILLEGAL_MOVE"
 
     def make_move(self, column: int, player: str) -> bool:
         if column < 0 or column >= self.columns:
