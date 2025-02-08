@@ -1,18 +1,18 @@
 import unittest
 import tkinter as tk
-from main.connect import ConnectTesta, Connect
+from main.connect import ConnectTesta, ConnectXMatch
 
 
 
 
 import pytest
-from main.connect import Connect, ConnectTesta
+from main.connect import ConnectXMatch, ConnectTesta
 import tkinter as tk
 import random
 
 @pytest.fixture
 def game():
-    return Connect(columns=7, rows=6, win_length=4)
+    return ConnectXMatch(columns=7, rows=6, win_length=4)
 
 def test_horizontal_win(game):
     # Simulate a horizontal win
@@ -61,7 +61,7 @@ def test_corner_win(game):
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the bottom-left corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for col in range(4):
         game.make_move(col, 'X')
         if col < 3:
@@ -70,30 +70,30 @@ def test_corner_win(game):
 
     ## Bottom right corner
     # Simulate columns win in the bottom-right corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for row in range(4):
-        game.make_move(game.columns - 1, 'X')
+        game.make_move(game.COLUMNS - 1, 'X')
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the bottom-right corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for col in range(4):
-        game.make_move(game.columns - 1 - col, 'X')
+        game.make_move(game.COLUMNS - 1 - col, 'X')
         if col < 3:
             assert not game.check_win()
     assert game.check_win()
 
     ## Top left corner
     # Simulate columns win in the top-left corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for row in range(4):
         game.board[0][-1-row] = 'X'
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the top-left corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for col in range(4):
         game.board[col][-1] = 'X'
         if col < 3:
@@ -102,14 +102,14 @@ def test_corner_win(game):
 
     ## Top right corner
     # Simulate columns win in the top-right corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for row in range(4):
         game.board[-1][-1-row] = 'X'
         if row < 3:
             assert not game.check_win()
     assert game.check_win()
     # Simulate row win in the top-right corner
-    game = Connect(columns=7, rows=6, win_length=4)
+    game = ConnectXMatch(columns=7, rows=6, win_length=4)
     for col in range(4):
         game.board[-1-col][-1] = 'X'
         if col < 3:
@@ -182,7 +182,7 @@ class TestConnectX(unittest.TestCase):
         columns, rows, win_length = 7, 6, 10
         starter = "Agent 1"
         
-        game = Connect(columns, rows, win_length)
+        game = ConnectXMatch(columns, rows, win_length)
         
         # Fill the board without any player winning
         for col in range(columns):

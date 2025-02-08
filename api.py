@@ -66,7 +66,7 @@ def play(board: np.ndarray, length_to_win: int) -> int:
 
 
 ### Example of how to use ConnectTesta ###
-from main.connect import Connect, ConnectTesta
+from main.connect import ConnectXMatch, ConnectTesta
 import numpy as np
 import random
 

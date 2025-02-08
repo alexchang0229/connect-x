@@ -267,8 +267,12 @@ class ConnectXMatchWithAgents:
         while self.game.game_state == ConnectXMatch.GameState.IN_PROGRESS:
             self.play_move_with_next_agent()
         return self.game.winner
+    
+class ConnectXKingMaker:
+    pass
+
 class ConnectXVisual:
-    def __init__(self, game: Connect, agent_1_name: str, agent_2_name: str):
+    def __init__(self, game: ConnectXMatch, agent_1_name: str, agent_2_name: str):
         self.game = game
         self.agent_1_name = agent_1_name
         self.agent_2_name = agent_2_name
@@ -278,12 +282,12 @@ class ConnectXVisual:
         self.game_over = False
 
     def update_board(self):
-        for col in range(self.game.columns):
-            for row in range(self.game.rows):
+        for col in range(self.game.COLUMNS):
+            for row in range(self.game.ROWS):
                 value = self.game.board[col][row]
                 color = "white" if value is None else ("red" if value == self.agent_1_name else "yellow")
                 x = col
-                y = self.game.rows - row - 1  # Invert the row index
+                y = self.game.ROWS - row - 1  # Invert the row index
                 canvas = self.cells[x][y]
                 canvas.delete("all")
                 if value is not None:
@@ -299,8 +303,8 @@ class ConnectXVisual:
             if self.game.check_win():
                 winner_color = "red" if self.player == self.agent_1_name else "yellow"
                 self.result_label.config(text=f"{self.player} wins!", font=("Helvetica", 24), fg=winner_color)
-                for col in range(self.game.columns):
-                    for row in range(self.game.rows):
+                for col in range(self.game.COLUMNS):
+                    for row in range(self.game.ROWS):
                         self.cells[col][row].config(bg="light green")
                 self.game_over = True
                 for button in self.buttons:
@@ -317,17 +321,17 @@ class ConnectXVisual:
         self.root = tk.Tk()
         self.root.title("Connect X")
 
-        self.cells = [[tk.Canvas(self.root, width=100, height=100, bg="white", borderwidth=2, relief="groove") for _ in range(self.game.rows)] for _ in range(self.game.columns)]
-        for col in range(self.game.columns):
-            for row in range(self.game.rows):
+        self.cells = [[tk.Canvas(self.root, width=100, height=100, bg="white", borderwidth=2, relief="groove") for _ in range(self.game.ROWS)] for _ in range(self.game.COLUMNS)]
+        for col in range(self.game.COLUMNS):
+            for row in range(self.game.ROWS):
                 self.cells[col][row].grid(row=row, column=col)
 
-        self.buttons = [tk.Button(self.root, text=f"Drop {col+1}", command=lambda col=col: self.make_move_and_update(col)) for col in range(self.game.columns)]
+        self.buttons = [tk.Button(self.root, text=f"Drop {col+1}", command=lambda col=col: self.make_move_and_update(col)) for col in range(self.game.COLUMNS)]
         for col, button in enumerate(self.buttons):
-            button.grid(row=self.game.rows, column=col)
+            button.grid(row=self.game.ROWS, column=col)
 
         self.result_label = tk.Label(self.root, text="")
-        self.result_label.grid(row=self.game.rows+1, columnspan=self.game.columns)
+        self.result_label.grid(row=self.game.ROWS+1, columnspan=self.game.COLUMNS)
 
     def manual_start(self):
         self.root.mainloop()
@@ -337,9 +341,9 @@ class ConnectXVisual:
             if self.game_over:
                 return
             if self.player == self.agent_1_name:
-                column = agent_1_func(self.game.board, self.game.win_length)
+                column = agent_1_func(self.game.board, self.game.WIN_LENGTH)
             else:
-                column = agent_2_func(self.game.board, self.game.win_length)
+                column = agent_2_func(self.game.board, self.game.WIN_LENGTH)
             self.make_move_and_update(column)
             if not self.game_over:
                 self.root.after(time_between_moves, play_next_move)
@@ -357,7 +361,19 @@ class ConnectTesta:
         self.agent_2_func: Callable = agent_2_func
         
     def play_game(self, columns: int, rows: int, win_length: int, starter: str):
-        game = Connect(columns, rows, win_length)
+        """
+        Play a game of Connect X between two agents.
+
+        Args:
+            columns (int): Number of columns in the game board.
+            rows (int): Number of rows in the game board.
+            win_length (int): Number of consecutive pieces needed to win.
+            starter (str): Name of the agent who starts the game.
+
+        Returns:
+            str: Name of the winning agent.
+        """
+        game = ConnectXMatch(columns, rows, win_length)
         player = starter
         while not game.check_win():
             if player == self.agent_1_name:
@@ -369,7 +385,7 @@ class ConnectTesta:
         return player
     
     def play_game_with_print(self, columns: int, rows: int, win_length: int, starter: str):
-        game = Connect(columns, rows, win_length)
+        game = ConnectXMatch(columns, rows, win_length)
         player = starter
         while not game.check_win():
             print(game)
@@ -383,19 +399,19 @@ class ConnectTesta:
         return player
     
     def play_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str):
-        game = Connect(columns, rows, win_length)
+        game = ConnectXMatch(columns, rows, win_length)
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
         visual.setup()
         visual.manual_start()  
 
     def play_automatic_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str, seconds_between_moves: int):
         milliseconds_between_moves = seconds_between_moves * 1000
-        game = Connect(columns, rows, win_length)
+        game = ConnectXMatch(columns, rows, win_length)
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
         visual.automatic_timed_start(self.agent_1_func, self.agent_2_func, milliseconds_between_moves)
 
     def play_step_game_with_visual(self, columns: int, rows: int, win_length: int, starter: str):
-        game = Connect(columns, rows, win_length)
+        game = ConnectXMatch(columns, rows, win_length)
         visual = ConnectXVisual(game, self.agent_1_name, self.agent_2_name)
         visual.setup()
         
@@ -407,7 +423,7 @@ class ConnectTesta:
             visual.make_move_and_update(column)
         
         continue_button = tk.Button(visual.root, text="Continue", command=play_next_move)
-        continue_button.grid(row=game.rows + 2, columnspan=game.columns)
+        continue_button.grid(row=game.ROWS + 2, columnspan=game.COLUMNS)
         
         visual.root.bind('<Return>', play_next_move)
         
