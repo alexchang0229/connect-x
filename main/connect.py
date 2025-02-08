@@ -7,19 +7,46 @@ import threading
 
 from typing import Callable
 
-class GameState(str, Enum):
-    """
-    Enum representing the possible states of a Connect X game.
-    """
-    DRAW = "DRAW"
-    WIN = "WIN"
-    IN_PROGRESS = "IN_PROGRESS"
-    ILLEGAL_MOVE = "ILLEGAL_MOVE"
+class ConnectXMatch:
+    class GameState(str, Enum):
+        """
+        Enum representing the possible states of a Connect X game.
+        """
+        DRAW = "DRAW"
+        WIN = "WIN"
+        IN_PROGRESS = "IN_PROGRESS"
+        ILLEGAL_MOVE = "ILLEGAL_MOVE"
+        TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
 
-    def make_move(self, column: int, player: str) -> bool:
-        if column < 0 or column >= self.columns:
-            raise Exception("Invalid column")
-        for row in range(0, self.rows):  # Start from the bottom row
+    """
+    This class represents a single Connect X game match.
+    """
+    def __init__(
+        self, 
+        columns: int, 
+        rows: int, 
+        win_length: int,
+        first_player_name: str,
+        second_player_name: str
+    ):
+        self.COLUMNS: int = columns
+        self.ROWS: int = rows
+        self.WIN_LENGTH: int = win_length
+        self.FIRST_PLAYER_NAME: str = first_player_name
+        self.SECOND_PLAYER_NAME: str = second_player_name
+
+        self.board: np.ndarray = np.full((columns, rows), None)
+        self.game_state: GameState = GameState.IN_PROGRESS
+        self.winner: str = None
+        self.previous_player_who_played: str = None
+        self.moves_played: Tuple[str, int] = []
+        self.log: List[str] = []
+
+    def get_other_player(self, player: str) -> str:
+        if player == self.FIRST_PLAYER_NAME:
+            return self.SECOND_PLAYER_NAME
+        return self.FIRST_PLAYER_NAME
+
             if self.board[column][row] is None:
                 self.board[column][row] = player
                 return True
