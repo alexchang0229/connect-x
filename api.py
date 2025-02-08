@@ -66,7 +66,7 @@ def play(board: np.ndarray, length_to_win: int) -> int:
 
 
 ### Example of how to use ConnectTesta ###
-from main.connect import Connect, ConnectTesta
+from main.connect import ConnectXMatch
 import numpy as np
 import random
 from competition.week_1 import weak_1_ncc_play_winning_move as ncc_play
@@ -78,7 +78,3 @@ def random_agent_1(board, win_length):
 def random_agent_2(board, win_length):
     # Random agent that picks a random column
     return random.randint(0, board.shape[0] - 1)
-
-if __name__ == "__main__":
-    testa = ConnectTesta("agent_1", random_agent_1, ncc_play.get_name(), ncc_play.play)
-    testa.play_automatic_game_with_visual(7, 6, 4, "agent_1", 1)
