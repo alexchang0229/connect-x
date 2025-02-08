@@ -3,7 +3,7 @@ import pytest
 import tkinter as tk
 import random
 
-from main.connect import GameState, ConnectXMatch, ConnectXMatchWithAgents, ConnectXMatchup
+from main.connect import GameState, ConnectXMatch, ConnectXMatchWithAgents, ConnectXMatchup, ConnectXVisual
 
 @pytest.fixture
 def game():
@@ -454,6 +454,16 @@ class TestConnectXMatchup:
         matchup.play_matchup()
         # Generate the report
         matchup.generate_report("test_report.txt")      
+
+
+class TestConnectXVisual:
+    def test_manual_start(self):
+        visual = ConnectXVisual(7, 6, 4)
+        visual.play_manual_game("X", "O")
+
+    def test_play_real_time_game(self):
+        visual = ConnectXVisual(7, 6, 4)
+        visual.play_real_time_game("X", "O", agent_first_column, agent_last_column, 1)
 
 
 

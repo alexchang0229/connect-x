@@ -494,54 +494,6 @@ class ConnectXVisual:
     def manual_start(self):
         self.root.mainloop()
 
-    def automatic_timed_start(self, agent_1_func: Callable, agent_2_func: Callable, time_between_moves: int):
-        def play_next_move():
-            if self.game_over:
-                return
-            if self.player == self.agent_1_name:
-                column = agent_1_func(self.game.board, self.game.WIN_LENGTH)
-            else:
-                column = agent_2_func(self.game.board, self.game.WIN_LENGTH)
-            self.play_with_next_player(column)
-            if not self.game_over:
-                self.root.after(time_between_moves, play_next_move)
-
-        self.setup(self.play_with_next_player)
-        self.root.after(time_between_moves, play_next_move)
-        self.root.mainloop()
-
-    def play_real_time_game(self, agent_1_name: str, agent_1_func: Callable, agent_2_name: str, agent_2_func: Callable, time_limit: int):
-        """
-        Play a real-time game between two agents.
-
-        Args:
-            agent_1_name (str): Name of the first agent.
-            agent_1_func (Callable): Function for the first agent.
-            agent_2_name (str): Name of the second agent.
-            agent_2_func (Callable): Function for the second agent.
-            time_limit (int): Time limit for each move in seconds.
-        """
-        self.game = ConnectXMatchWithAgents(
-            self.columns,
-            self.rows,
-            self.win_length,
-            agent_1_name,
-            agent_2_name,
-            agent_1_func,
-            agent_2_func,
-            time_limit
-        )
-
-        def play_next_move():
-            if self.game.game.game_state == GameState.IN_PROGRESS:
-                self.game.play_move_with_next_agent()
-                self.update_board(self.game.game)
-                self.root.after(time_limit * 1000, play_next_move)
-
-        self.setup(self.play_with_next_player)
-        self.root.after(time_limit * 1000, play_next_move)
-        self.root.mainloop()
-
     def play_manual_game(self, agent_1_name: str, agent_2_name: str):
         """
         Play a manual game between two agents.
@@ -565,3 +517,81 @@ class ConnectXVisual:
 
         self.setup(play_next_move)
         self.manual_start()
+
+    def play_real_time_game(self, agent_1_name: str, agent_2_name: str, agent_1_func: Callable, agent_2_func: Callable, time_limit: int):
+        """
+        Play a real-time game between two agents.
+
+        Args:
+            agent_1_name (str): Name of the first agent.
+            agent_1_func (Callable): Function for the first agent.
+            agent_2_name (str): Name of the second agent.
+            agent_2_func (Callable): Function for the second agent.
+            time_limit (int): Time limit for each move in seconds.
+        """
+        self.game = ConnectXMatchWithAgents(
+            self.columns,
+            self.rows,
+            self.win_length,
+            agent_1_name,
+            agent_2_name,
+            agent_1_func,
+            agent_2_func,
+            time_limit
+        )
+        self.agent_1_name = agent_1_name
+        self.agent_2_name = agent_2_name
+        self.player = agent_1_name
+
+        def play_next_move():
+            if self.game.game.game_state == GameState.IN_PROGRESS:
+                self.game.play_move_with_next_agent()
+                self.update_board(self.game.game)
+                if self.game.game.game_state == GameState.IN_PROGRESS:
+                    self.root.after(time_limit * 1000, play_next_move)
+
+        self.setup(play_next_move)
+        play_next_move()
+        self.root.mainloop()
+
+
+    # def play_multiple_games(self, agent_1_name: str, agent_2_name: str, agent_1_func: Callable, agent_2_func: Callable, time_limit: int, number_games: int):
+    #     """
+    #     Play a real-time game between two agents.
+
+    #     Args:
+    #         agent_1_name (str): Name of the first agent.
+    #         agent_1_func (Callable): Function for the first agent.
+    #         agent_2_name (str): Name of the second agent.
+    #         agent_2_func (Callable): Function for the second agent.
+    #         time_limit (int): Time limit for each move in seconds.
+    #     """
+    #     self.game = ConnectXMatchWithAgents(
+    #         self.columns,
+    #         self.rows,
+    #         self.win_length,
+    #         agent_1_name,
+    #         agent_2_name,
+    #         agent_1_func,
+    #         agent_2_func,
+    #         time_limit
+    #     )
+    #     self.agent_1_name = agent_1_name
+    #     self.agent_2_name = agent_2_name
+    #     self.player = agent_1_name
+
+    #     for _ in range(5):
+    #         self.play_real_time_game(agent_1_name, agent_2_name, agent_1_func, agent_2_func, time_limit)
+    #         self.play_real_time_game(agent_2_name, agent_1_name, agent_2_func, agent_1_func, time_limit)
+
+    #     def play_next_move():
+    #         if self.game.game.game_state == GameState.IN_PROGRESS:
+    #             self.game.play_move_with_next_agent()
+    #             self.update_board(self.game.game)
+    #             if self.game.game.game_state == GameState.IN_PROGRESS:
+    #                 self.root.after(time_limit * 1000, play_next_move)
+
+    #     self.setup(play_next_move)
+    #     play_next_move()
+    #     self.root.mainloop()
+
