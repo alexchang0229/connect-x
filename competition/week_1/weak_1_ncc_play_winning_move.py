@@ -47,13 +47,12 @@ def check_for_win(new_board,length_to_win,name):
 def get_name():
     return "NCC"
 
-def play(board: np.ndarray, length_to_win: int) -> int:
+def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
     # Get the number of columns and rows
     columns = board.shape[0]
     rows = board.shape[1]
     
-    name = "NCC"
-    opponent = "agent_1"
+    name = get_name()
     board_copy = board.copy()
     for column in range(columns):
         new_board = test_move(board_copy,column, name)
@@ -61,7 +60,7 @@ def play(board: np.ndarray, length_to_win: int) -> int:
         if(check_for_win(new_board,length_to_win,name)):
             return column
         
-        if(check_for_win(new_board, length_to_win,opponent)):
+        if(check_for_win(new_board, length_to_win,opponent_name)):
             backup_move = True
             blocking_move = column
         
