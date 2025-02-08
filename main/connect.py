@@ -47,41 +47,50 @@ class ConnectXMatch:
             return self.SECOND_PLAYER_NAME
         return self.FIRST_PLAYER_NAME
 
+    def check_illegal_move(self, column: int, player: str) -> Tuple[GameState, str]:
+        # Check if player exists
+        if player not in [self.FIRST_PLAYER_NAME, self.SECOND_PLAYER_NAME]:
+            raise Exception(f"Error, player {player} is not in the game.")
+        # Check if the game is in progress.
+        if self.game_state != GameState.IN_PROGRESS:
+            raise Exception(f"Error, tried to play while in terminal state. Cannot play in game state: {self.game_state}")
+        # Check if the column is valid.
+        if column < 0 or column >= self.COLUMNS:
+            return GameState.ILLEGAL_MOVE
+        # Check if the column is already full before move.
+        for row in range(0, self.ROWS):
             if self.board[column][row] is None:
-                self.board[column][row] = player
-                return True
-        raise Exception("Column is full")
+                return GameState.IN_PROGRESS, ""
+        return GameState.ILLEGAL_MOVE, "Tried to play in a full column"
     
     def check_win(self) -> bool:
-        for x, y in itertools.product(range(self.columns), range(self.rows)):
+        for x, y in itertools.product(range(self.COLUMNS), range(self.ROWS)):
             if self.check_win_at_position(x, y):
                 return True
-        if all(all(self.board[col][row] is not None for row in range(self.rows)) for col in range(self.columns)):
-            raise Exception("The game is a draw. All columns are full.")
         return False
     
     def check_win_at_position(self, x, y) -> bool:
         # Make a subarray with lower left corner at x, y
         # First, check if enough space to the right and above
-        num_columns_on_right = self.columns - x - 1
-        num_rows_above = self.rows - y - 1
-        if num_columns_on_right < self.win_length - 1 or num_rows_above < self.win_length - 1:
+        num_columns_on_right = self.COLUMNS - x - 1
+        num_rows_above = self.ROWS - y - 1
+        if num_columns_on_right < self.WIN_LENGTH - 1 or num_rows_above < self.WIN_LENGTH - 1:
             return False
         else:
             # Get subarray
-            subarray = self.board[x:x+self.win_length, y:y+self.win_length]
+            subarray = self.board[x:x+self.WIN_LENGTH, y:y+self.WIN_LENGTH]
             # Check if there is a win in the subarray
             return self.check_subarray_win(subarray)
             
     def check_subarray_win(self, subarray: np.ndarray) -> bool:
         # Check columns
-        for column in range(self.win_length):
+        for column in range(self.WIN_LENGTH):
             if subarray[column, 0] is None:
                 continue
             if all(subarray[column, :] == subarray[column, 0]):
                 return True
         # Check rows
-        for row in range(self.win_length):
+        for row in range(self.WIN_LENGTH):
             if subarray[0, row] is None:
                 continue
             if all(subarray[:, row] == subarray[0, row]):
@@ -92,7 +101,12 @@ class ConnectXMatch:
         if subarray[0, -1] is not None and all(np.fliplr(subarray).diagonal() == subarray[0, -1]):
             return True
         return False
-            
+    
+    def check_draw(self) -> bool:
+        if all(all(self.board[col][row] is not None for row in range(self.ROWS)) for col in range(self.COLUMNS)):
+            return True
+        return False
+    
     @staticmethod
     def beautify_transformation(val: str):
         if val is None:
