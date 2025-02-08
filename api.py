@@ -78,6 +78,6 @@ def random_agent_2(board, win_length):
     # Random agent that picks a random column
     return random.randint(0, board.shape[0] - 1)
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # testa = ConnectTesta("agent_1", random_agent_1, "agent_2", random_agent_2)
     # testa.play_automatic_game_with_visual(7, 6, 4, "agent_1", 1)
