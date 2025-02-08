@@ -1,67 +1,5 @@
-"""
-This file contains the API for the Connect game. 
-
-TO DO
------
-Implement the following functions:
-    - get_name: return your name as a string
-    - play: play a move in the game of Connect
-"""
-
-import numpy as np
-
-
-def get_name():
-    pass
-
-
-def play(board: np.ndarray, length_to_win: int) -> int:
-    """
-    Play a move in the game of Connect.
-
-    How does the board represent the game state?
-    -------------------------------------------
-    The board is represented in cartesian coordinates with indexes starting at 0.
-    Ex:
-    board[0][0] is the bottom left corner of the board.
-        [_, _, _, _]
-        [_, _, _, _]
-        [_, _, _, _]
-        [x, _, _, _]
-
-    board[3][0] is the bottom right corner of the board.
-        [_, _, _, _]
-        [_, _, _, _]
-        [_, _, _, _]
-        [_, _, _, x]
-
-    board[0][3] is the top left corner of the board.
-        [x, _, _, _]
-        [_, _, _, _]
-        [_, _, _, _]
-        [_, _, _, _]
-
-    board[3][3] is the top right corner of the board.
-        [_, _, _, x]
-        [_, _, _, _]
-        [_, _, _, _]
-        [_, _, _, _]
-
-
-    Args:
-        board: a 2D numpy array representing the game board.
-
-    Returns:
-        An integer representing the column in which to play the next move. The column is 0-indexed.
-    """
-    pass
-
-
-### Example of how to use ConnectTesta ###
-from main.connect import ConnectXMatch
 import numpy as np
 import random
-from competition.week_1 import weak_1_ncc_play_winning_move as ncc_play
 
 unit_vectors = [
     [0, 1],
@@ -79,6 +17,9 @@ def heuritic(board, win_length):
     if "heuritic" not in board:
         # random for first move
         return random.randint(0, board.shape[0] - 1)
+
+    if win_blocker(board, "heuritic"):
+        return win_blocker(board, "heuritic")[0]
 
     board_width = len(board)
     board_height = len(board[0])
@@ -99,21 +40,21 @@ def heuritic(board, win_length):
                         break
                     pos = board[head_y][head_x]
                     if pos == "heuritic":
-                        count += 1
+                        count += 1 / (head + 1)
                     elif type(pos) == str:
                         break
                 how_many_in_a_row.append(count)
-                score = max(how_many_in_a_row)
+            score = max(how_many_in_a_row)
 
-                if x > 0:
-                    if board[y][x - 1] == None:
-                        # no floating pieces
-                        score = 0
-                if board[y][x] != None:
-                    # Occupied spot
+            if x > 0:
+                if board[y][x - 1] == None:
+                    # no floating pieces
                     score = 0
+            if board[y][x] != None:
+                # Occupied spot
+                score = 0
 
-                cell_scores[y][x] = score
+            cell_scores[y][x] = score
     max_score_index = np.unravel_index(
         np.argmax(cell_scores, axis=None), cell_scores.shape
     )
@@ -121,33 +62,36 @@ def heuritic(board, win_length):
     return answer
 
 
-def win_blocker(board):
+def win_blocker(board, name):
     board_width = len(board)
     board_height = len(board[0])
 
     for y in range(board_width):
         for x in range(board_height):
             for vector in unit_vectors:
-                count = 0
+                mine_count = 0
+                theirs_count = 0
                 for head in range(0, 4):
                     head_x = x + head * vector[1]
                     head_y = y + head * vector[0]
                     if not (0 <= head_x < board_height and 0 <= head_y < board_width):
                         break
                     cell = board[head_y][head_x]
-                    if cell == None:
-                        break
-                    if cell != "random_agent_2":
-                        count += 1
-                    else:
-                        break
-                if count == 3:
-                    head = 3
-                    head_x = x + head * vector[1]
-                    head_y = y + head * vector[0]
-                    if 0 <= head_x < board_height and 0 <= head_y < board_width:
-                        if board[head_y][head_x] == None:
-                            return (head_y, head_x)
+                    if cell != name and cell != None:
+                        theirs_count += 1
+                    if cell == name:
+                        mine_count += 1
+                if mine_count == 3 or theirs_count == 3:
+                    for head in range(0, 4):
+                        head_x = x + head * vector[1]
+                        head_y = y + head * vector[0]
+                        if 0 <= head_x < board_height and 0 <= head_y < board_width:
+                            # if next cell in 3 in a row sequence is in the board
+                            if board[head_y][head_x - 1] is not None or head_x == 0:
+                                # if the next cell is on the first row or there is a token under it
+                                if board[head_y][head_x] == None:
+                                    # if it is not currently occupied
+                                    return (head_y, head_x)
     return
 
 
@@ -155,10 +99,12 @@ def columnator(board, win_length):
     if "columnator" not in board:
         # random for first move
         return random.randint(0, board.shape[0] - 1)
-    print(win_blocker(board))
+    if win_blocker(board, "columnator"):
+        return win_blocker(board, "columnator")[0]
 
     column_counts = []
     for col_ind, column in enumerate(board):
+        # Sort columns by how many of my tokens are in each one
         count = 0
         for slot in column:
             if slot == "columnator":
@@ -169,6 +115,7 @@ def columnator(board, win_length):
     sorted_columns = [col[0] for col in column_counts]
 
     for column_ind in sorted_columns:
+        # Go through sorted columns and play token if it can fit 4 in a row
         count = 0
         empties = 0
         for slot in board[column_ind]:
@@ -180,10 +127,3 @@ def columnator(board, win_length):
                 empties += 1
         if empties + count > 4:
             return column_ind
-
-
-def random_agent_2(board, win_length):
-    # Random agent that picks a random column
-    if win_blocker(board):
-        return win_blocker(board)[0]
-    return random.randint(0, board.shape[0] - 1)
