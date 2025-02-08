@@ -7,17 +7,27 @@ import threading
 
 from typing import Callable
 
-class ConnectXMatch:
-    class GameState(str, Enum):
-        """
-        Enum representing the possible states of a Connect X game.
-        """
-        DRAW = "DRAW"
-        WIN = "WIN"
-        IN_PROGRESS = "IN_PROGRESS"
-        ILLEGAL_MOVE = "ILLEGAL_MOVE"
-        TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
 
+
+
+
+
+class GameState(str, Enum):
+    """
+    Enum representing the possible states of a Connect X game.
+    """
+    DRAW = "DRAW"
+    WIN = "WIN"
+    IN_PROGRESS = "IN_PROGRESS"
+    ILLEGAL_MOVE = "ILLEGAL_MOVE"
+    TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
+
+
+
+
+
+
+class ConnectXMatch:
     """
     This class represents a single Connect X game match.
     """
@@ -185,7 +195,12 @@ class ConnectXMatch:
         arr = vectorized_transform(self.board)
         rotated_arr = np.rot90(arr)
         return str(rotated_arr)
-    
+
+
+
+
+
+
 class ConnectXMatchWithAgents:
     def __init__(
         self,
@@ -228,13 +243,13 @@ class ConnectXMatchWithAgents:
         move_thread.join(timeout=self.time_limit)
         # UPDATE STATE FOR TIME LIMIT EXCEEDED
         if move_thread.is_alive():
-            self.game.game_state = ConnectXMatch.GameState.TIME_LIMIT_EXCEEDED
+            self.game.game_state = GameState.TIME_LIMIT_EXCEEDED
             self.game.winner = self.game.get_other_player(player)
             self.previous_player_who_played = player
             message = f"Player {player} exceeded the time limit and lost."
             self.game.log.append(message)
             print(message)
-            return ConnectXMatch.GameState.TIME_LIMIT_EXCEEDED
+            return GameState.TIME_LIMIT_EXCEEDED
         else:
             # If the thread finished on time, make the move
             return self.game.make_move(column_answer, player)
@@ -264,10 +279,15 @@ class ConnectXMatchWithAgents:
         Returns:
             str: The name of the winning agent.
         """
-        while self.game.game_state == ConnectXMatch.GameState.IN_PROGRESS:
+        while self.game.game_state == GameState.IN_PROGRESS:
             self.play_move_with_next_agent()
         return self.game.winner
-    
+
+
+
+
+
+
 class ConnectXKingMaker:
     pass
 
