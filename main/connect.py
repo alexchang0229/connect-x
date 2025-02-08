@@ -185,7 +185,88 @@ class ConnectXMatch:
         arr = vectorized_transform(self.board)
         rotated_arr = np.rot90(arr)
         return str(rotated_arr)
+    
+class ConnectXMatchWithAgents:
+    def __init__(
+        self,
+        columns: int,
+        rows: int,
+        win_length: int,
+        first_player_name: str,
+        second_player_name: str,
+        first_player_func: Callable,
+        second_player_func: Callable,
+        time_limit: int
+    ):
+        self.game: ConnectXMatch = ConnectXMatch(columns, rows, win_length, first_player_name, second_player_name)
+        self.first_player_func: Callable = first_player_func
+        self.second_player_func: Callable = second_player_func
+        self.time_limit: float = time_limit
 
+    def play_move_with_agent(self, player: str) -> bool:
+        """
+        This method plays a move with the agent specified by the player argument.
+        This method creates a new thread to enforce the time limit.
+
+        Args:
+            player (str): The player who is making the move.
+
+        Returns:
+            bool: True if the game goes on, False otherwise.
+        """
+        # Create a nested function to run the agent function
+        column_answer = None
+        def agent_move():
+            nonlocal column_answer
+            column_answer = func(self.game.board, self.game.WIN_LENGTH)
+
+        # Call the function in a thread
+        func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
+        move_thread = threading.Thread(target=agent_move)
+        move_thread.start()
+        # Start the thread and wait until the function returns or the time limit is exceeded.
+        move_thread.join(timeout=self.time_limit)
+        # UPDATE STATE FOR TIME LIMIT EXCEEDED
+        if move_thread.is_alive():
+            self.game.game_state = ConnectXMatch.GameState.TIME_LIMIT_EXCEEDED
+            self.game.winner = self.game.get_other_player(player)
+            self.previous_player_who_played = player
+            message = f"Player {player} exceeded the time limit and lost."
+            self.game.log.append(message)
+            print(message)
+            return ConnectXMatch.GameState.TIME_LIMIT_EXCEEDED
+        else:
+            # If the thread finished on time, make the move
+            return self.game.make_move(column_answer, player)
+        
+    def play_move_with_next_agent(self) -> str:
+        """
+        This method plays a move with the agent specified by the player argument.
+        This method creates a new thread to enforce the time limit.
+
+        Args:
+            player (str): The player who is making the move.
+
+        Returns:
+            bool: True if the game goes on, False otherwise.
+        """
+        # Determine the current player
+        if self.game.previous_player_who_played is None:
+            next_player: str = self.game.FIRST_PLAYER_NAME
+        else:
+            next_player: str = self.game.get_other_player(self.game.previous_player_who_played)
+        return self.play_move_with_agent(next_player)
+
+    def play_game(self) -> str:
+        """
+        This method plays a game between two agents.
+
+        Returns:
+            str: The name of the winning agent.
+        """
+        while self.game.game_state == ConnectXMatch.GameState.IN_PROGRESS:
+            self.play_move_with_next_agent()
+        return self.game.winner
 class ConnectXVisual:
     def __init__(self, game: Connect, agent_1_name: str, agent_2_name: str):
         self.game = game
