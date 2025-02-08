@@ -64,6 +64,9 @@ class ConnectXMatch:
         # Check if the game is in progress.
         if self.game_state != GameState.IN_PROGRESS:
             raise Exception(f"Error, tried to play while in terminal state. Cannot play in game state: {self.game_state}")
+        # Check if column is an integer.
+        if not isinstance(column, int):
+            return GameState.ILLEGAL_MOVE, "Column must be an integer."
         # Check if the column is valid.
         if column < 0 or column >= self.COLUMNS:
             return GameState.ILLEGAL_MOVE, "Played outside of the board."
@@ -320,6 +323,11 @@ class ConnectXMatchup:
 
         self.saved_player_1_games: List[ConnectXMatch] = []
         self.saved_player_2_games: List[ConnectXMatch] = []
+
+        self.percentage_first_player_wins: float = None
+        self.percentage_second_player_wins: float = None
+        self.percentage_draws: float = None
+        self.winner: str = None
 
     def play_matchup(self) -> str:
         for _ in range(self.number_of_games):

@@ -3,14 +3,13 @@ import pytest
 import tkinter as tk
 import random
 
-from main.connect import ConnectXMatch, ConnectXMatchWithAgents, ConnectXVisual, GameState
+from main.connect import GameState, ConnectXMatch, ConnectXMatchWithAgents, ConnectXMatchup
 
 @pytest.fixture
 def game():
     return ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
 
 class TestConnectXMatch:
-
     def test_check_illegal_move(self, game: ConnectXMatch):
         # Ensure an illegal move is detected
         game.make_move(0, 'X')
@@ -31,7 +30,6 @@ class TestConnectXMatch:
         assert game.winner is "O"
         assert game.previous_player_who_played is 'X'
         
-
         # Play in a full column
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
         for _ in range(6):
@@ -41,6 +39,14 @@ class TestConnectXMatch:
         assert game.game_state == GameState.ILLEGAL_MOVE
         assert game.winner is "X"
         assert game.previous_player_who_played is 'O'
+
+        # Play None or string
+        game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
+        with pytest.raises(Exception):
+            game.make_move(0, None)
+        with pytest.raises(Exception):
+            game.make_move(0, "string")
+
 
     def test_horizontal_win(self, game: ConnectXMatch):
         # Simulate a horizontal win
