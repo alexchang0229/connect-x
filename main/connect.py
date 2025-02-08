@@ -272,7 +272,7 @@ class ConnectXMatchWithAgents:
             next_player: str = self.game.get_other_player(self.game.previous_player_who_played)
         return self.play_move_with_agent(next_player)
 
-    def play_game(self) -> str:
+    def play_full_game(self) -> str:
         """
         This method plays a game between two agents.
 
@@ -288,8 +288,117 @@ class ConnectXMatchWithAgents:
 
 
 
-class ConnectXKingMaker:
-    pass
+class ConnectXMatchup:
+    def __init__(
+        self,
+        columns: int,
+        rows: int,
+        win_length: int,
+        first_player_name: str,
+        second_player_name: str,
+        first_player_func: Callable,
+        second_player_func: Callable,
+        time_limit: int,
+        win_percentage_threshold_for_win: float,
+        number_of_games: int
+    ):
+        self.columns: int = columns
+        self.rows: int = rows
+        self.win_length: int = win_length
+        self.first_player_name: str = first_player_name
+        self.second_player_name: str = second_player_name
+        self.first_player_func: Callable = first_player_func
+        self.second_player_func: Callable = second_player_func
+        self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
+        self.time_limit: float = time_limit
+        self.number_of_games: int = number_of_games
+
+        self.first_player_wins: int = 0
+        self.second_player_wins: int = 0
+        self.draws: int = 0
+
+        self.saved_player_1_games: List[ConnectXMatch] = []
+        self.saved_player_2_games: List[ConnectXMatch] = []
+
+    def play_matchup(self) -> str:
+        for _ in range(self.number_of_games):
+            game = ConnectXMatchWithAgents(
+                self.columns,
+                self.rows,
+                self.win_length,
+                self.first_player_name,
+                self.second_player_name,
+                self.first_player_func,
+                self.second_player_func,
+                self.time_limit
+            )
+            winner = game.play_full_game()
+            if winner == self.first_player_name:
+                self.first_player_wins += 1
+                if len(self.saved_player_1_games) < 5:
+                    self.saved_player_1_games.append(game.game)
+            elif winner == self.second_player_name:
+                self.second_player_wins += 1
+                if len(self.saved_player_2_games) < 5:
+                    self.saved_player_2_games.append(game.game)
+            else:
+                self.draws += 1
+        return self.analyse_matchup(self.first_player_wins, self.second_player_wins, self.draws)
+    
+    def analyse_matchup(self, first_player_wins, second_player_wins, draws):
+        self.percentage_first_player_wins: float = first_player_wins / (first_player_wins + second_player_wins + draws)
+        self.percentage_second_player_wins: float = second_player_wins / (first_player_wins + second_player_wins + draws)
+        self.percentage_draws: float = draws / (first_player_wins + second_player_wins + draws)
+        # Decide the winner, if winner there is.
+        self.winner: str = self.determine_winner()
+        return self.winner
+
+    def determine_winner(self) -> str:
+        if self.percentage_first_player_wins >= self.percentage_second_player_wins + self.win_percentage_threshold_for_win:
+            return self.first_player_name
+        elif self.percentage_second_player_wins >= self.percentage_first_player_wins + self.win_percentage_threshold_for_win:
+            return self.second_player_name
+        else:
+            return "NO CLEAR WINNER. The difference in win percentage is less than the threshold."
+        
+    def generate_report(self, file_path: str):
+        """
+        Generate a report of the matchup and print it to a specified text file.
+
+        Args:
+            file_path (str): The path of the file to print the report to.
+
+        Raises:
+            Exception: If the matchup has not occurred yet.
+        """
+        if not hasattr(self, 'winner'):
+            raise Exception("The matchup has not occurred yet. Please run the matchup before generating a report.")
+
+        report_lines = [
+            "Connect X Matchup Report",
+            "========================",
+            f"Columns: {self.columns}",
+            f"Rows: {self.rows}",
+            f"Win Length: {self.win_length}",
+            f"First Player: {self.first_player_name}",
+            f"Second Player: {self.second_player_name}",
+            f"Number of Games: {self.number_of_games}",
+            f"Time Limit: {self.time_limit} seconds",
+            f"Win Percentage Threshold for Win: {self.win_percentage_threshold_for_win:.2%}",
+            "",
+            "Results:",
+            f"First Player Wins: {self.first_player_wins} ({self.percentage_first_player_wins:.2%})",
+            f"Second Player Wins: {self.second_player_wins} ({self.percentage_second_player_wins:.2%})",
+            f"Draws: {self.draws} ({self.percentage_draws:.2%})",
+            "",
+            f"Winner: {self.winner}",
+            "========================"
+        ]
+
+        with open(file_path, 'w') as file:
+            file.write("\n".join(report_lines))
+
+
 
 class ConnectXVisual:
     def __init__(self, game: ConnectXMatch, agent_1_name: str, agent_2_name: str):
