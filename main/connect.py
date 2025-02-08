@@ -107,6 +107,70 @@ class ConnectXMatch:
             return True
         return False
     
+    def make_move(self, column: int, player: str) -> bool:
+        """ This method:
+            Checks for illegal moves.
+            Updates the game board.
+            Checks for wins and draws.
+            Updates the game state.
+            Updates the winner.
+            Updates the last player to have played.
+            Adds to the log.
+            makes updates the game board with a move from a player.
+
+        Args:
+            column (int): The column in which to play the move.
+            player (str): The player making the move.
+
+        Returns:
+            bool: True if the move was goes on, False otherwise.
+        """
+        # Add move to the list of moves
+        self.moves_played.append((player, column))
+        # Check if the move is illegal
+        state, message = self.check_illegal_move(column, player)
+        # UPDATE STATE FOR ILLEGAL MOVE
+        if state == GameState.ILLEGAL_MOVE:
+            # Update state
+            self.game_state = state
+            self.winner = self.previous_player_who_played
+            self.previous_player_who_played = player
+            self.log.append(message)
+            self.log.append(f"Player {player} tried to play in full column {column} and lost.")
+            print(message)
+            return False
+        # Make the actual move - modify the game board
+        for row in range(0, self.ROWS):
+            if self.board[column][row] is None:
+                self.board[column][row] = player
+        # UPDATE STATE FOR WIN
+        if self.check_win():
+            self.game_state = GameState.WIN
+            self.winner = player
+            self.previous_player_who_played = player
+            self.log.append(f"Player {player} won the game.")
+            return False
+        # UPDATE STATE FOR DRAW
+        if self.check_draw():
+            self.game_state = GameState.DRAW
+            self.previous_player_who_played = player
+            self.log.append("The game is a draw. All columns are full.")
+            return False
+        # UPDATE STATE FOR IN PROGRESS
+        self.log.append(f"Player {player} played in column {column}.")
+        self.previous_player_who_played = player
+        return True
+
+    def play_with_next_player(self, column: int) -> GameState:
+        """ Automatically figures out the next player to play based on the last player to have played.
+        """
+        # Determine the current player
+        if self.previous_player_who_played is None:
+            next_player = self.FIRST_PLAYER_NAME
+        else:
+            next_player = self.get_other_player(self.previous_player_who_played)
+        return self.make_move(column, next_player)
+
     @staticmethod
     def beautify_transformation(val: str):
         if val is None:
