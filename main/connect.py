@@ -65,7 +65,9 @@ class ConnectXMatch:
         if self.game_state != GameState.IN_PROGRESS:
             raise Exception(f"Error, tried to play while in terminal state. Cannot play in game state: {self.game_state}")
         # Check if column is an integer.
-        if not isinstance(column, int):
+        try:
+            int(column)
+        except:
             return GameState.ILLEGAL_MOVE, "Column must be an integer."
         # Check if the column is valid.
         if column < 0 or column >= self.COLUMNS:
@@ -237,7 +239,8 @@ class ConnectXMatchWithAgents:
         column_answer = None
         def agent_move():
             nonlocal column_answer
-            column_answer = func(self.game.board, self.game.WIN_LENGTH)
+            opponent_name = self.game.get_other_player(player)
+            column_answer = func(self.game.board, self.game.WIN_LENGTH, opponent_name)
 
         # Call the function in a thread
         func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
@@ -537,7 +540,7 @@ class ConnectXVisual:
             agent_2_name,
             agent_1_func,
             agent_2_func,
-            time_limit
+            time_limit + 10000
         )
         self.agent_1_name = agent_1_name
         self.agent_2_name = agent_2_name

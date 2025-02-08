@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import copy
 
 unit_vectors = [
     [0, 1],
@@ -13,7 +14,9 @@ unit_vectors = [
 ]
 
 
-def heuritic(board, win_length):
+def heuritic(board, win_length, opponent_name):
+    board = copy.deepcopy(board)
+
     if "heuritic" not in board:
         # random for first move
         return random.randint(0, board.shape[0] - 1)
@@ -59,6 +62,8 @@ def heuritic(board, win_length):
         np.argmax(cell_scores, axis=None), cell_scores.shape
     )
     answer = max_score_index[0]
+    print(answer)
+    answer = int(answer)
     return answer
 
 
@@ -95,7 +100,8 @@ def win_blocker(board, name):
     return
 
 
-def columnator(board, win_length):
+def columnator(board, win_length, opponent_name):
+    board = copy.deepcopy(board)
     if "columnator" not in board:
         # random for first move
         return random.randint(0, board.shape[0] - 1)

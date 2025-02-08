@@ -10,7 +10,9 @@ Implement the following functions:
 
 
 
+
 import numpy as np
+import copy
 
 
 def test_move(board_copy,column,name):
@@ -48,13 +50,15 @@ def get_name():
     return "NCC"
 
 def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
+    board = copy.deepcopy(board)
     # Get the number of columns and rows
     columns = board.shape[0]
     rows = board.shape[1]
-    
+    backup_move = False
     name = get_name()
-    board_copy = board.copy()
     for column in range(columns):
+        board_copy = copy.deepcopy(board)
+        column = int(column)
         new_board = test_move(board_copy,column, name)
         #Check for win
         if(check_for_win(new_board,length_to_win,name)):
@@ -69,4 +73,5 @@ def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
     else:    
     # Randomly choose a column
         column = np.random.randint(columns)
+        column = int(column)
         return column
