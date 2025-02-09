@@ -1,0 +1,18 @@
+Connect X Matchup Report
+========================
+Columns: 7
+Rows: 6
+Win Length: 4
+First Player: NCC
+Second Player: columnator
+Number of Games: 100
+Time Limit: 2 seconds
+Win Percentage Threshold for Win: 1
+
+Results:
+First Player Wins: 2 (2.0)
+Second Player Wins: 98 (98.0)
+Draws: 0 (0.0)
+
+Winner: columnator
+========================
