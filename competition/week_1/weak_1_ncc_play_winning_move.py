@@ -15,9 +15,28 @@ import numpy as np
 import copy
 import random
 import logging
+import math
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='ncc_agent.log', level=logging.DEBUG, filemode="w")
+logging.basicConfig(filename='ncc_agent.log', level=logging.CRITICAL, filemode="w")
+
+def fuzzy_closest(lst, target, randomness=0.75):
+    """
+    Selects a number from lst that is generally close to target but with some randomness.
+    
+    randomness: 0 (always closest) to 1 (completely random).
+    """
+    # Compute distances from the target
+    distances = np.abs(np.array(lst) - target)
+    
+    # Convert distances to weights (closer = higher weight)
+    weights = np.exp(-distances / (randomness * distances.std() + 1e-9))  # Avoid div by zero
+    
+    # Normalize weights to sum to 1
+    weights /= weights.sum()
+    
+    # Randomly pick an element with these weights
+    return random.choices(lst, weights=weights, k=1)[0]
 
 def test_move(board_copy,column,name):
     column_to_play = board_copy[column]
@@ -78,7 +97,7 @@ def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
     rows = board.shape[1]
     backup_move = False
     possible_moves = []
-
+    logger.error("NEXT TURN")
     name = get_name()
     for column in range(columns):
         temp_board_name = copy.deepcopy(board)
@@ -87,7 +106,7 @@ def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
         logger.info(f"Checking for own winning move in {column}")
         if(check_for_win(new_board,length_to_win,name)):
             final_move = column
-            logger.warning(f"Playing winning move in {final_move}")
+            logger.error(f"Playing winning move in {final_move}")
             return column
         temp_board_opponent = copy.deepcopy(board)
         new_board_opponent = test_move(temp_board_opponent,column, opponent_name)
@@ -99,12 +118,12 @@ def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
                 possible_moves.append(column)
         
     if backup_move:
-        logger.warning(f"playing blocking move in column {blocking_move}")
+        logger.error(f"playing blocking move in column {blocking_move}")
         return blocking_move
     else:    
     # Randomly choose a VALID column that doesn't lead to win for opponent
         if len(possible_moves) > 0:
-            last_resort = possible_moves
+            last_resort = possible_moves.copy()
             for move in possible_moves:
                 future_board_opponent = copy.deepcopy(board)
                 new_board_future = test_move(future_board_opponent, move, name)
@@ -117,13 +136,32 @@ def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
                         possible_moves.remove(move)
                         logger.warning(f"Removing column {move} from list {possible_moves}")
                         break
+                    
             if len(possible_moves)>0:
                 logger.warning(f"possible moves that won't lead to opponent win are {possible_moves}")
-                final_move = random.choice(possible_moves)
-                logger.warning(f"playing move in {final_move}")
+                #Check for move that would lead to three pieces in a row
+                for column in possible_moves:
+                    three_piece_board_check = copy.deepcopy(board)
+                    new_board = test_move(three_piece_board_check,column, name)
+                    #Check for win
+                    logger.info(f"Checking for own win-1 move in {column}")
+                    if(check_for_win(new_board,length_to_win-1,name)):
+                        potential_move = column
+                        
+                        for next_column in possible_moves:
+                            future_board = copy.deepcopy(new_board)
+                            future_new_board = test_move(future_board,next_column, name)
+                            logger.info(f"checking if 3 piece move in {potential_move} can result in win with {next_column}")
+                            if(check_for_win(future_new_board,length_to_win,name)):
+                                logger.error(f"can win next turn, playing winning-1 move in {potential_move}")
+                                return potential_move
+                final_move = fuzzy_closest(possible_moves, math.floor(columns/2))
+                logger.error(f"playing random move in {final_move}")
                 return final_move
             else:
                 logger.warning(f"no safe move to play have to play one of {last_resort}")
-                return random.choice(last_resort)
+                move = random.choice(last_resort)
+                logger.error(f"playing move in column {move}")
+                return move
         else:
             logger.error("No moves to play")
