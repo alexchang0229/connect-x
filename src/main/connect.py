@@ -4,6 +4,7 @@ import tkinter as tk
 from enum import Enum
 from typing import Tuple, List, Callable
 import threading
+import time
 
 from typing import Callable
 
@@ -443,7 +444,7 @@ class ConnectXVisual:
         for col in range(match.COLUMNS):
             for row in range(match.ROWS):
                 value = match.board[col][row]
-                color = "white" if value is None else ("red" if value == self.agent_1_name else "yellow")
+                color = "white" if value is None else ("red" if value == match.FIRST_PLAYER_NAME else "yellow")
                 x = col
                 y = match.ROWS - row - 1  # Invert the row index
                 canvas = self.cells[x][y]
@@ -453,8 +454,8 @@ class ConnectXVisual:
                     canvas.create_text(self.width/2, self.height/2, text=value, fill="black")
 
         if match.game_state == GameState.WIN:
-            winner_color = "red" if self.player == self.agent_1_name else "yellow"
-            self.result_label.config(text=f"{self.player} wins!", font=("Helvetica", 24), fg=winner_color)
+            winner_color = "green"
+            self.result_label.config(text=f"{match.winner} wins!", font=("Helvetica", 24), fg=winner_color)
             for col in range(match.COLUMNS):
                 for row in range(match.ROWS):
                     self.cells[col][row].config(bg="light green")
@@ -465,7 +466,7 @@ class ConnectXVisual:
             for col in range(match.COLUMNS):
                 for row in range(match.ROWS):
                     self.cells[col][row].config(bg="red")
-            self.result_label.config(text=f"{match.winner} wins! {self.player} lost due to {'illegal move' if match.game_state == GameState.ILLEGAL_MOVE else 'time limit exceeded'}.", font=("Helvetica", 24), fg="red")
+            self.result_label.config(text=f"{match.winner} wins! {match.get_other_player(match.winner)} lost due to {'illegal move' if match.game_state == GameState.ILLEGAL_MOVE else 'time limit exceeded'}.", font=("Helvetica", 24), fg="red")
             self.game_over = True
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
@@ -505,23 +506,20 @@ class ConnectXVisual:
             agent_1_name (str): Name of the first agent.
             agent_2_name (str): Name of the second agent.
         """
-        self.game = ConnectXMatch(self.columns, self.rows, self.win_length, agent_1_name, agent_2_name)
-        self.agent_1_name = agent_1_name
-        self.agent_2_name = agent_2_name
-        self.player = agent_1_name
+        game = ConnectXMatch(self.columns, self.rows, self.win_length, agent_1_name, agent_2_name)
 
         def play_next_move(column):
             if self.game_over:
                 return
-            self.game.play_with_next_player(column)
-            self.update_board(self.game)
-            if self.game.game_state in [GameState.WIN, GameState.ILLEGAL_MOVE, GameState.TIME_LIMIT_EXCEEDED, GameState.DRAW]:
+            game.play_with_next_player(column)
+            self.update_board(game)
+            if game.game_state in [GameState.WIN, GameState.ILLEGAL_MOVE, GameState.TIME_LIMIT_EXCEEDED, GameState.DRAW]:
                 self.game_over = True
 
         self.setup(play_next_move)
         self.manual_start()
 
-    def play_real_time_game(self, agent_1_name: str, agent_2_name: str, agent_1_func: Callable, agent_2_func: Callable, time_limit: int):
+    def play_real_time_game(self, agent_1_name: str, agent_2_name: str, agent_1_func: Callable, agent_2_func: Callable, agents_turn_time_limit_seconds: int, time_between_moves_for_visualization_seconds: int):
         """
         Play a real-time game between two agents.
 
@@ -532,7 +530,7 @@ class ConnectXVisual:
             agent_2_func (Callable): Function for the second agent.
             time_limit (int): Time limit for each move in seconds.
         """
-        self.game = ConnectXMatchWithAgents(
+        game_with_agents = ConnectXMatchWithAgents(
             self.columns,
             self.rows,
             self.win_length,
@@ -540,61 +538,66 @@ class ConnectXVisual:
             agent_2_name,
             agent_1_func,
             agent_2_func,
-            time_limit + 10000
+            agents_turn_time_limit_seconds
         )
-        self.agent_1_name = agent_1_name
-        self.agent_2_name = agent_2_name
-        self.player = agent_1_name
 
         def play_next_move():
-            if self.game.game.game_state == GameState.IN_PROGRESS:
-                self.game.play_move_with_next_agent()
-                self.update_board(self.game.game)
-                if self.game.game.game_state == GameState.IN_PROGRESS:
-                    self.root.after(time_limit * 1000, play_next_move)
+            if game_with_agents.game.game_state == GameState.IN_PROGRESS:
+                game_with_agents.play_move_with_next_agent()
+                self.update_board(game_with_agents.game)
+                if game_with_agents.game.game_state == GameState.IN_PROGRESS:
+                    time_between_moves_for_visualization_milliseconds = time_between_moves_for_visualization_seconds * 1000
+                    self.root.after(time_between_moves_for_visualization_milliseconds, play_next_move)
 
         self.setup(play_next_move)
         play_next_move()
         self.root.mainloop()
 
 
-    # def play_multiple_games(self, agent_1_name: str, agent_2_name: str, agent_1_func: Callable, agent_2_func: Callable, time_limit: int, number_games: int):
-    #     """
-    #     Play a real-time game between two agents.
+    def play_manual_against_agent(
+        self, 
+        human_name: str, 
+        agent_name: str, 
+        agent_func: Callable, 
+        human_starts: bool, 
+        agents_turn_time_limit_seconds: int, 
+        time_between_moves_for_visualization_seconds: int = 0.2
+    ):
+        """
+        Play a game between a human and an agent.
 
-    #     Args:
-    #         agent_1_name (str): Name of the first agent.
-    #         agent_1_func (Callable): Function for the first agent.
-    #         agent_2_name (str): Name of the second agent.
-    #         agent_2_func (Callable): Function for the second agent.
-    #         time_limit (int): Time limit for each move in seconds.
-    #     """
-    #     self.game = ConnectXMatchWithAgents(
-    #         self.columns,
-    #         self.rows,
-    #         self.win_length,
-    #         agent_1_name,
-    #         agent_2_name,
-    #         agent_1_func,
-    #         agent_2_func,
-    #         time_limit
-    #     )
-    #     self.agent_1_name = agent_1_name
-    #     self.agent_2_name = agent_2_name
-    #     self.player = agent_1_name
+        Args:
+            human_name (str): Name of the human player.
+            agent_name (str): Name of the agent.
+            agent_func (Callable): Function for the agent.
+            human_starts (bool): If True, the human starts. Otherwise, the agent starts.
+            agents_turn_time_limit_seconds (int): Time limit for the agent's move in seconds.
+            time_between_moves_for_visualization_seconds (int): Time between moves for visualization in seconds.
+        """
+        game_with_agents = ConnectXMatchWithAgents(
+            self.columns,
+            self.rows,
+            self.win_length,
+            human_name if human_starts else agent_name,
+            agent_name if human_starts else human_name,
+            None if human_starts else agent_func,
+            agent_func if human_starts else None,
+            agents_turn_time_limit_seconds
+        )
 
-    #     for _ in range(5):
-    #         self.play_real_time_game(agent_1_name, agent_2_name, agent_1_func, agent_2_func, time_limit)
-    #         self.play_real_time_game(agent_2_name, agent_1_name, agent_2_func, agent_1_func, time_limit)
+        def play_next_move(column=None):
+            if game_with_agents.game.game_state == GameState.IN_PROGRESS:
+                if game_with_agents.game.previous_player_who_played == human_name:
+                    game_with_agents.play_move_with_agent(agent_name)
+                else:
+                    game_with_agents.game.play_with_next_player(column)
+                self.update_board(game_with_agents.game)
+                if game_with_agents.game.game_state == GameState.IN_PROGRESS and game_with_agents.game.previous_player_who_played == human_name:
+                    time_between_moves_for_visualization_milliseconds = int(time_between_moves_for_visualization_seconds * 1000)
+                    self.root.after(time_between_moves_for_visualization_milliseconds, play_next_move)
 
-    #     def play_next_move():
-    #         if self.game.game.game_state == GameState.IN_PROGRESS:
-    #             self.game.play_move_with_next_agent()
-    #             self.update_board(self.game.game)
-    #             if self.game.game.game_state == GameState.IN_PROGRESS:
-    #                 self.root.after(time_limit * 1000, play_next_move)
-
-    #     self.setup(play_next_move)
-    #     play_next_move()
-    #     self.root.mainloop()
+        self.setup(play_next_move)
+        if not human_starts:
+            play_next_move()
+        self.root.mainloop()
 

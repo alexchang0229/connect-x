@@ -469,16 +469,18 @@ class TestConnectXMatchup:
 
 
 
-# class TestConnectXVisual:
+class TestConnectXVisual:
     # def test_manual_start(self):
     #     visual = ConnectXVisual(7, 6, 4)
     #     visual.play_manual_game("X", "O")
 
     # def test_play_real_time_game(self):
     #     visual = ConnectXVisual(7, 6, 4)
-    #     visual.play_real_time_game("X", "O", agent_first_column, agent_last_column, 1)
+    #     visual.play_real_time_game("X", "O", agent_first_column, agent_last_column, 100, 1)
 
-
+    def test_play_manual_against_agent(self):
+        visual = ConnectXVisual(7, 6, 4)
+        visual.play_manual_against_agent("Human", "AI", agent_first_column, True, 100, 0.2)
 
 if __name__ == "__main__":
     unittest.main()
