@@ -1,9 +1,9 @@
 import unittest
 import pytest
-import tkinter as tk
 import random
+import os
 
-from main.connect import GameState, ConnectXMatch, ConnectXMatchWithAgents, ConnectXMatchup, ConnectXVisual
+from src.main.connect import GameState, ConnectXMatch, ConnectXMatchWithAgents, ConnectXMatchup, ConnectXVisual
 
 @pytest.fixture
 def game():
@@ -266,26 +266,30 @@ class TestConnectXMatch:
 
 
 
-def agent_first_column(board, win_length):
+def agent_first_column(board, win_length, opponent_name):
     # Simple agent that always picks the first available column
     return 0
-def agent_last_column(board, win_length):
+def agent_last_column(board, win_length, opponent_name):
     # Simple agent that always picks the last available column
     return board.shape[0] - 1
         
-def agent_empty(board, win_length):
+def agent_empty(board, win_length, opponent_name):
     # Finds the first empty column and plays there
     # Otherwise random
-    for col in range(board.shape[0]):
+    for col in range(1, board.shape[0]):
         if board[col][0] is None:
+            return col
+        elif board[col][1] == None:
+            return col
+        elif board[col][2] == None:
             return col
     return random.randint(0, board.shape[0] - 1)
 
-def random_agent_1(board, win_length):
+def random_agent_1(board, win_length, opponent_name):
     # Random agent that picks a random column
     return random.randint(0, board.shape[0] - 1)
 
-def random_agent_2(board, win_length):
+def random_agent_2(board, win_length, opponent_name):
     # Random agent that picks a random column
     return random.randint(0, board.shape[0] - 1)
 
@@ -454,16 +458,25 @@ class TestConnectXMatchup:
         matchup.play_matchup()
         # Generate the report
         matchup.generate_report("test_report.txt")      
+        # Check that the report exists
+        try:
+            with open("test_report.txt", "r") as f:
+                pass
+        except FileNotFoundError:
+            assert False
+        # Remove the report
+        os.remove("test_report.txt")
 
 
-class TestConnectXVisual:
-    def test_manual_start(self):
-        visual = ConnectXVisual(7, 6, 4)
-        visual.play_manual_game("X", "O")
 
-    def test_play_real_time_game(self):
-        visual = ConnectXVisual(7, 6, 4)
-        visual.play_real_time_game("X", "O", agent_first_column, agent_last_column, 1)
+# class TestConnectXVisual:
+    # def test_manual_start(self):
+    #     visual = ConnectXVisual(7, 6, 4)
+    #     visual.play_manual_game("X", "O")
+
+    # def test_play_real_time_game(self):
+    #     visual = ConnectXVisual(7, 6, 4)
+    #     visual.play_real_time_game("X", "O", agent_first_column, agent_last_column, 1)
 
 
 

@@ -334,8 +334,8 @@ class ConnectXMatchup:
 
     def switch_players(self, current_player: str):
         if current_player == self.first_player_name:
-            return self.second_player_name, self.second_player_func, self.first_player_name, self.first_player_func
-        return self.first_player_name, self.first_player_func, self.second_player_name, self.second_player_func
+            return self.second_player_name, self.first_player_name, self.second_player_func, self.first_player_func
+        return self.first_player_name, self.second_player_name, self.first_player_func, self.second_player_func
 
 
     def play_matchup(self) -> str:
@@ -365,7 +365,7 @@ class ConnectXMatchup:
                     self.saved_player_2_games.append(game.game)
             else:
                 self.draws += 1
-            current_player, current_player_function, opponent_player, opponent_player_function = self.switch_players(current_player)
+            current_player, opponent_player, current_player_function, opponent_player_function = self.switch_players(current_player)
         return self.analyse_matchup(self.first_player_wins, self.second_player_wins, self.draws)
     
     def analyse_matchup(self, first_player_wins, second_player_wins, draws):
