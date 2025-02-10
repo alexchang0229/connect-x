@@ -611,6 +611,7 @@ class ConnectXVisual:
         if match.game_state == GameState.WIN:
             winner_color = "green"
             self.result_label.config(text=f"{match.winner} wins!", font=("Helvetica", 24), fg=winner_color)
+            self.state_label.config(text="Game over")
             for col in range(match.COLUMNS):
                 for row in range(match.ROWS):
                     self.cells[col][row].config(bg="light green")
@@ -622,6 +623,7 @@ class ConnectXVisual:
                 for row in range(match.ROWS):
                     self.cells[col][row].config(bg="red")
             self.result_label.config(text=f"{match.winner} wins! {match.get_other_player(match.winner)} lost due to {'illegal move' if match.game_state == GameState.ILLEGAL_MOVE else 'time limit exceeded'}.", font=("Helvetica", 24), fg="red")
+            self.state_label.config(text="Game over")
             self.game_over = True
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
@@ -630,25 +632,32 @@ class ConnectXVisual:
                 for row in range(match.ROWS):
                     self.cells[col][row].config(bg="yellow")
             self.result_label.config(text="The game is a draw. No winners.", font=("Helvetica", 24), fg="yellow")
+            self.state_label.config(text="Game over")
             self.game_over = True
             for button in self.buttons:
                 button.config(state=tk.DISABLED)
+        else:
+            current_player = match.get_other_player(match.previous_player_who_played) if match.previous_player_who_played else match.FIRST_PLAYER_NAME
+            self.state_label.config(text=f"Turn: {current_player}")
 
     def setup(self, button_method: Callable):
         self.root = tk.Tk()
         self.root.title("Connect X")
 
+        self.state_label = tk.Label(self.root, text="Turn: Player 1", font=("Helvetica", 16))
+        self.state_label.grid(row=0, columnspan=self.columns)
+
         self.cells = [[tk.Canvas(self.root, width=100, height=100, bg="white", borderwidth=2, relief="groove") for _ in range(self.rows)] for _ in range(self.columns)]
         for col in range(self.columns):
             for row in range(self.rows):
-                self.cells[col][row].grid(row=row, column=col)
+                self.cells[col][row].grid(row=row+1, column=col)
 
         self.buttons = [tk.Button(self.root, text=f"Drop {col+1}", command=lambda col=col: button_method(col)) for col in range(self.columns)]
         for col, button in enumerate(self.buttons):
-            button.grid(row=self.rows, column=col)
+            button.grid(row=self.rows+1, column=col)
 
         self.result_label = tk.Label(self.root, text="")
-        self.result_label.grid(row=self.rows+1, columnspan=self.columns)
+        self.result_label.grid(row=self.rows+2, columnspan=self.columns)
 
     def manual_start(self):
         self.root.mainloop()
