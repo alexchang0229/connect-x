@@ -658,9 +658,9 @@ class TestConnectXTournament:
 
 class TestConnectXVisual:
     pass
-    # def test_manual_start(self):
-    #     visual = ConnectXVisual(7, 6, 4)
-    #     visual.play_manual_game("X", "O")
+    def test_manual_start(self):
+        visual = ConnectXVisual(7, 6, 4)
+        visual.play_manual_game("X", "O")
 
     # def test_play_real_time_game(self):
     #     visual = ConnectXVisual(7, 6, 4)
