@@ -62,9 +62,102 @@ def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
 
 
 ####################################################################################################
-# EXAMPLE #
+# EXAMPLES #
 ####################################################################################################
-from main.connect import ConnectXMatch
+from src.main.connect import Matchup, ConnectXVisual, Agent, BoardDimension, MetaMatchup, Tournament
 import numpy as np
 import random
 
+
+
+##### Example: Defining an agent #####
+# Simple agent that always picks the first available column
+def get_first_column_name():
+    return "First Column Agent"
+def agent_first_column(board, win_length, opponent_name):
+    return 0
+
+# Random agent that picks a random column
+def get_random_agent_1_name():
+    return "Random Agent 1"
+def random_agent_1(board, win_length, opponent_name):
+    return random.randint(0, board.shape[0] - 1)
+
+# Simple agent that always picks the last available column
+def get_last_column_name():
+    return "Last Column Agent"
+def agent_last_column(board, win_length, opponent_name):
+    return board.shape[0] - 1
+
+
+##### Example: Playing a matchup between multiple agents #####
+# Create a matchup
+matchup: Matchup = Matchup(7, 6, 4, get_first_column_name(), get_random_agent_1_name(), agent_first_column, random_agent_1, 1, 5, 10)
+# Play a matchup
+matchup.play_matchup()
+# Generate a report
+matchup.generate_report("first_column_vs_random_agent_1.txt")
+
+
+##### Example: Playing a metamatchup between multiple agents #####
+# The metamatchup allows to easily play multiple matchups with different board dimensions and win lengths.
+board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
+win_lengths = [4, 5]
+first_agent = Agent("First Column", agent_first_column)
+second_agent = Agent("Random Agent 1", random_agent_1)
+meta_matchup: MetaMatchup = MetaMatchup(
+    board_dimensions,
+    win_lengths,
+    first_agent,
+    second_agent,
+    turn_time_limit_s=1,
+    win_percentage_threshold_for_win=5,
+    number_of_games_per_matchup=10
+)
+# Play the metamatchup
+meta_matchup.play_matchups()
+# Generate a report
+meta_matchup.generate_report("meta_first_column_vs_random_agent_1.txt")
+
+
+##### Example: Playing a tournament #####
+# The tournament allows to easily play multiple metamatchups with different agents.
+# Create a tournament
+board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
+win_lengths = [4, 5]
+agents = [
+    Agent("First Column", agent_first_column),
+    Agent("Random Agent 1", random_agent_1),
+    Agent("Last Column", agent_last_column)
+]
+tournament: Tournament = Tournament(
+    board_dimensions,
+    win_lengths,
+    agents,
+    turn_time_limit_s=1,
+    win_percentage_threshold_for_win=5,
+    number_of_games_per_matchup=10
+)
+# Play the tournament
+tournament.play_tournament()
+# Generate a report
+tournament.generate_reports_in_dir("test_tournament_reports")
+
+##### Visualizing the game ######
+# # Playing a game manually 
+# visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
+# visual.play_manual_game("X", "O")
+
+# # Play a game against an agent
+# visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
+# visual.play_manual_against_agent("Human", "AI", agent_first_column, True, 1, 0.2)
+
+# # Visualize a game between two agents
+# visual = ConnectXVisual(7, 6, 4, 100, 100)
+# visual.play_real_time_game("X", "O", agent_first_column, random_agent_1, 1, 2)
+
+# # Visualize X games between two agents (will alternate the starting player)
+# visual = ConnectXVisual(7, 6, 4, 100, 100)
+# agent_1: Agent = Agent("Agent1", agent_first_column)
+# agent_2: Agent = Agent("Agent2", random_agent_1)
+# visual.play_multiple_real_time_games(agent_1, agent_2, 1, 2, 3)

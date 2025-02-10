@@ -12,7 +12,7 @@ from src.main.connect import (
     ConnectXVisual, 
     BoardDimension, 
     Agent,
-    ConnectXTournament
+    Tournament
 )
 
 @pytest.fixture
@@ -585,7 +585,7 @@ class TestMetaMatchup:
 
 
 
-class TestConnectXTournament:
+class TestTournament:
     def test_play_tournament(self):
         board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
         win_lengths = [4, 5]
@@ -594,7 +594,7 @@ class TestConnectXTournament:
             Agent("Agent2", agent_last_column),
             Agent("Agent3", agent_empty)
         ]
-        tournament: ConnectXTournament = ConnectXTournament(
+        tournament: Tournament = Tournament(
             board_dimensions,
             win_lengths,
             agents,
@@ -628,7 +628,7 @@ class TestConnectXTournament:
             Agent("Agent2", agent_last_column),
             Agent("Agent3", agent_empty)
         ]
-        tournament: ConnectXTournament = ConnectXTournament(
+        tournament: Tournament = Tournament(
             board_dimensions,
             win_lengths,
             agents,

@@ -4,8 +4,8 @@ import tkinter as tk
 from enum import Enum
 from typing import Tuple, List, Callable
 import threading
-import time
 import copy
+import os
 
 
 from typing import Callable, List, Dict
@@ -579,6 +579,104 @@ class MetaMatchup:
 
 
 
+class Tournament:
+    def __init__(
+        self,
+        board_dimensions: List[BoardDimension],
+        win_lengths: List[int],
+        agents: List[Agent],
+        turn_time_limit_s: int,
+        win_percentage_threshold_for_win: float,
+        number_of_games_per_matchup: int
+    ):
+        # Parameters
+        self.board_dimensions: List[BoardDimension] = board_dimensions
+        self.win_lengths: List[int] = win_lengths
+        self.agents: List[Agent] = agents
+        self.turn_time_limit_s: int = turn_time_limit_s
+        self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
+        self.number_of_games_per_matchup: int = number_of_games_per_matchup
+
+        # Meta Matchups
+        self.meta_matchups: List[MetaMatchup] = []
+
+        # Analysis
+        self.agents_metamatchup_wins: Dict[str, int] = {}
+        for agent in self.agents:
+            self.agents_metamatchup_wins[agent.name] = 0
+        self.agents_metamatchup_wins[NO_WINNER_STATE] = 0
+        self.overall_winner: str = None
+
+    def play_tournament(self):
+        for agent_1, agent_2 in itertools.combinations(self.agents, 2):
+            meta_matchup = MetaMatchup(
+                self.board_dimensions,
+                self.win_lengths,
+                agent_1,
+                agent_2,
+                self.turn_time_limit_s,
+                self.win_percentage_threshold_for_win,
+                self.number_of_games_per_matchup
+            )
+            meta_matchup.play_matchups()
+            self.meta_matchups.append(meta_matchup)
+        self.analyse_tournament()
+
+    def analyse_tournament(self):
+        for meta_matchup in self.meta_matchups:
+            if meta_matchup.overall_winner is not None:
+                if meta_matchup.overall_winner == NO_WINNER_MESSAGE:
+                    self.agents_metamatchup_wins[NO_WINNER_STATE] += 1
+                else:    
+                    self.agents_metamatchup_wins[meta_matchup.overall_winner] += 1
+                
+        self.overall_winner = self.determine_overall_winner()
+
+    def determine_overall_winner(self) -> str:
+        # No clear winner if two agents have the same number of wins
+        max_wins = max(self.agents_metamatchup_wins.values())
+        if list(self.agents_metamatchup_wins.values()).count(max_wins) > 1:
+            return NO_WINNER_STATE
+        return max(self.agents_metamatchup_wins, key=self.agents_metamatchup_wins.get)
+    
+    def generate_reports_in_dir(self, file_dir: str):
+        """
+        Generate a report of the matchup and print it to a specified text file.
+
+        Args:
+            file_dir (str): The path of the file to print the report to.
+
+        Raises:
+            Exception: If the matchup has not occurred yet.
+        """
+        # If the directory does not exist, create it.
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+
+        if not hasattr(self, 'overall_winner'):
+            raise Exception("The tournament has not occurred yet. Please run the tournament before generating a report.")
+        report_lines = [
+            "Connect X Tournament Report",
+            "========================",
+            "Agents:",
+            "\n".join([f"{agent.name}: {self.agents_metamatchup_wins[agent.name]}" for agent in self.agents]),
+            "",
+            "Results:",
+            f"Winner: {self.overall_winner}",
+            "========================",
+        ]
+        with open(file_dir + "/tournament_result.txt", 'w') as file:
+            file.write("\n".join(report_lines) + "\n")
+
+        # Generate meta matchup reports
+        for meta_matchup in self.meta_matchups:
+            meta_matchup.generate_report(file_path=file_dir + f"/{meta_matchup.first_agent.name}_vs_{meta_matchup.second_agent.name}.txt")
+
+
+
+
+
+
 class ConnectXVisual:
     def __init__(
         self,
@@ -815,95 +913,3 @@ class ConnectXVisual:
                 agents_turn_time_limit_s, 
                 time_between_moves_for_visualization_s
             )
-
-
-
-
-class ConnectXTournament:
-    def __init__(
-        self,
-        board_dimensions: List[BoardDimension],
-        win_lengths: List[int],
-        agents: List[Agent],
-        turn_time_limit_s: int,
-        win_percentage_threshold_for_win: float,
-        number_of_games_per_matchup: int
-    ):
-        # Parameters
-        self.board_dimensions: List[BoardDimension] = board_dimensions
-        self.win_lengths: List[int] = win_lengths
-        self.agents: List[Agent] = agents
-        self.turn_time_limit_s: int = turn_time_limit_s
-        self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
-        self.number_of_games_per_matchup: int = number_of_games_per_matchup
-
-        # Meta Matchups
-        self.meta_matchups: List[MetaMatchup] = []
-
-        # Analysis
-        self.agents_metamatchup_wins: Dict[str, int] = {}
-        for agent in self.agents:
-            self.agents_metamatchup_wins[agent.name] = 0
-        self.agents_metamatchup_wins[NO_WINNER_STATE] = 0
-        self.overall_winner: str = None
-
-    def play_tournament(self):
-        for agent_1, agent_2 in itertools.combinations(self.agents, 2):
-            meta_matchup = MetaMatchup(
-                self.board_dimensions,
-                self.win_lengths,
-                agent_1,
-                agent_2,
-                self.turn_time_limit_s,
-                self.win_percentage_threshold_for_win,
-                self.number_of_games_per_matchup
-            )
-            meta_matchup.play_matchups()
-            self.meta_matchups.append(meta_matchup)
-        self.analyse_tournament()
-
-    def analyse_tournament(self):
-        for meta_matchup in self.meta_matchups:
-            if meta_matchup.overall_winner is not None:
-                if meta_matchup.overall_winner == NO_WINNER_MESSAGE:
-                    self.agents_metamatchup_wins[NO_WINNER_STATE] += 1
-                else:    
-                    self.agents_metamatchup_wins[meta_matchup.overall_winner] += 1
-                
-        self.overall_winner = self.determine_overall_winner()
-
-    def determine_overall_winner(self) -> str:
-        # No clear winner if two agents have the same number of wins
-        max_wins = max(self.agents_metamatchup_wins.values())
-        if list(self.agents_metamatchup_wins.values()).count(max_wins) > 1:
-            return NO_WINNER_STATE
-        return max(self.agents_metamatchup_wins, key=self.agents_metamatchup_wins.get)
-    
-    def generate_reports_in_dir(self, file_dir: str):
-        """
-        Generate a report of the matchup and print it to a specified text file.
-
-        Args:
-            file_dir (str): The path of the file to print the report to.
-
-        Raises:
-            Exception: If the matchup has not occurred yet.
-        """
-        if not hasattr(self, 'overall_winner'):
-            raise Exception("The tournament has not occurred yet. Please run the tournament before generating a report.")
-        report_lines = [
-            "Connect X Tournament Report",
-            "========================",
-            "Agents:",
-            "\n".join([f"{agent.name}: {self.agents_metamatchup_wins[agent.name]}" for agent in self.agents]),
-            "",
-            "Results:",
-            f"Winner: {self.overall_winner}",
-            "========================",
-        ]
-        with open(file_dir + "/tournament_result.txt", 'w') as file:
-            file.write("\n".join(report_lines) + "\n")
-
-        # Generate meta matchup reports
-        for meta_matchup in self.meta_matchups:
-            meta_matchup.generate_report(file_path=file_dir + f"/{meta_matchup.first_agent.name}_vs_{meta_matchup.second_agent.name}.txt")

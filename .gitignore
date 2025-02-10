@@ -3,3 +3,7 @@
 .vscode
 out/*
 .env
+first_column_vs_random_agent_1.txt
+meta_first_column_vs_random_agent_1.txt
+test_tournament_reports
+test_tournament_reports/*
