@@ -12,6 +12,12 @@ from typing import Callable, List, Dict
 
 
 
+NO_WINNER_STATE: str = "NO_CLEAR_WINNER"
+NO_WINNER_MESSAGE: str = "NO CLEAR WINNER. The difference in win percentage is less than the threshold."
+
+
+
+
 
 class GameState(str, Enum):
     """
@@ -383,7 +389,7 @@ class Matchup:
         elif self.percentage_second_player_wins >= self.percentage_first_player_wins + self.win_percentage_threshold_for_win:
             return self.second_player_name
         else:
-            return "NO CLEAR WINNER. The difference in win percentage is less than the threshold."
+            return NO_WINNER_MESSAGE
         
     def get_report_lines(self) -> List[str]:
         return [
@@ -692,7 +698,7 @@ class MetaMatchup:
         elif self.overall_percentage_second_player_wins >= self.overall_percentage_first_player_wins + self.win_percentage_threshold_for_win:
             return self.second_agent.name
         else:
-            return "NO CLEAR WINNER. The difference in win percentage is less than the threshold."
+            return NO_WINNER_MESSAGE
 
     def generate_report(self, file_path: str):
         """
@@ -767,6 +773,7 @@ class ConnectXTournament:
         self.agents_metamatchup_wins: Dict[str, int] = {}
         for agent in self.agents:
             self.agents_metamatchup_wins[agent.name] = 0
+        self.agents_metamatchup_wins[NO_WINNER_STATE] = 0
         self.overall_winner: str = None
 
     def play_tournament(self):
@@ -787,10 +794,21 @@ class ConnectXTournament:
     def analyse_tournament(self):
         for meta_matchup in self.meta_matchups:
             if meta_matchup.overall_winner is not None:
-                self.agents_metamatchup_wins[meta_matchup.overall_winner] += 1
-        self.overall_winner = max(self.agents_metamatchup_wins, key=self.agents_metamatchup_wins.get)
+                if meta_matchup.overall_winner == NO_WINNER_MESSAGE:
+                    self.agents_metamatchup_wins[NO_WINNER_STATE] += 1
+                else:    
+                    self.agents_metamatchup_wins[meta_matchup.overall_winner] += 1
+                
+        self.overall_winner = self.determine_overall_winner()
 
-    def generate_report(self, file_dir: str):
+    def determine_overall_winner(self) -> str:
+        # No clear winner if two agents have the same number of wins
+        max_wins = max(self.agents_metamatchup_wins.values())
+        if list(self.agents_metamatchup_wins.values()).count(max_wins) > 1:
+            return NO_WINNER_STATE
+        return max(self.agents_metamatchup_wins, key=self.agents_metamatchup_wins.get)
+    
+    def generate_reports_in_dir(self, file_dir: str):
         """
         Generate a report of the matchup and print it to a specified text file.
 
@@ -802,9 +820,6 @@ class ConnectXTournament:
         """
         if not hasattr(self, 'overall_winner'):
             raise Exception("The tournament has not occurred yet. Please run the tournament before generating a report.")
-        
-        number_of_wins_per_agents_lines: List[str] = [f"{agent.name}: {self.agents_metamatchup_wins[agent.name]}" for agent in self.agents]
-        
         report_lines = [
             "Connect X Tournament Report",
             "========================",
@@ -815,8 +830,7 @@ class ConnectXTournament:
             f"Winner: {self.overall_winner}",
             "========================",
         ]
-        report_lines += number_of_wins_per_agents_lines
-        with open(file_dir + "tournament_result.txt", 'w') as file:
+        with open(file_dir + "/tournament_result.txt", 'w') as file:
             file.write("\n".join(report_lines) + "\n")
 
         # Generate meta matchup reports

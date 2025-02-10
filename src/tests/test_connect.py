@@ -3,7 +3,17 @@ import pytest
 import random
 import os
 
-from src.main.connect import GameState, ConnectXMatch, ConnectXMatchWithAgents, Matchup, MetaMatchup, ConnectXVisual, BoardDimension, Agent
+from src.main.connect import (
+    GameState, 
+    ConnectXMatch, 
+    ConnectXMatchWithAgents, 
+    Matchup, 
+    MetaMatchup, 
+    ConnectXVisual, 
+    BoardDimension, 
+    Agent,
+    ConnectXTournament
+)
 
 @pytest.fixture
 def game():
@@ -468,6 +478,10 @@ class TestConnectXMatchup:
         os.remove("test_report.txt")
 
 
+
+
+
+
 class TestMetaMatchup:
     def test_play_matchups(self):
         board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
@@ -565,9 +579,85 @@ class TestMetaMatchup:
             assert False
         # Remove the report
         os.remove("test_report.txt")
+
+
+
+
+
+
+class TestConnectXTournament:
+    def test_play_tournament(self):
+        board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
+        win_lengths = [4, 5]
+        agents = [
+            Agent("Agent1", agent_first_column),
+            Agent("Agent2", agent_last_column),
+            Agent("Agent3", agent_empty)
+        ]
+        tournament: ConnectXTournament = ConnectXTournament(
+            board_dimensions,
+            win_lengths,
+            agents,
+            turn_time_limit_s=5,
+            win_percentage_threshold_for_win=10,
+            number_of_games_per_matchup=10
+        )
         
+        # Before playing tournament
+        assert tournament.meta_matchups == []
+        assert tournament.overall_winner is None
+        for agent in agents:
+            assert tournament.agents_metamatchup_wins[agent.name] == 0
+        
+        # Play tournament
+        tournament.play_tournament()
+        
+        # After playing tournament
+        assert len(tournament.meta_matchups) == len(agents) * (len(agents) - 1) // 2
+        assert tournament.overall_winner is not None
+        total_wins = sum(tournament.agents_metamatchup_wins[agent.name] for agent in agents)
+        assert total_wins == 2
+        assert len(tournament.meta_matchups) == 3
+        assert tournament.overall_winner == 'NO_CLEAR_WINNER'
+
+    def test_generate_report(self):
+        board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
+        win_lengths = [4, 5]
+        agents = [
+            Agent("Agent1", agent_first_column),
+            Agent("Agent2", agent_last_column),
+            Agent("Agent3", agent_empty)
+        ]
+        tournament: ConnectXTournament = ConnectXTournament(
+            board_dimensions,
+            win_lengths,
+            agents,
+            turn_time_limit_s=5,
+            win_percentage_threshold_for_win=10,
+            number_of_games_per_matchup=10
+        )
+        # Play tournament
+        tournament.play_tournament()
+        # Create the directory if it does not exist
+        if not os.path.exists("test_dir_for_tournament_reports"):
+            os.mkdir("test_dir_for_tournament_reports")
+        # Generate the reports
+        tournament.generate_reports_in_dir("test_dir_for_tournament_reports")      
+        # Check that the reports exists
+        # Check that there is 4 reports in the directory
+        reports = os.listdir("test_dir_for_tournament_reports")
+        assert len(reports) == 4
+        # Check that one of the reports is the overall report
+        assert "tournament_result.txt" in reports
+        # Remove the reports
+        for report in reports:
+            os.remove(f"test_dir_for_tournament_reports/{report}")
+        # Remove the dir too
+        os.rmdir("test_dir_for_tournament_reports")
+
 
 class TestConnectXVisual:
+    pass
     # def test_manual_start(self):
     #     visual = ConnectXVisual(7, 6, 4)
     #     visual.play_manual_game("X", "O")
@@ -576,9 +666,9 @@ class TestConnectXVisual:
     #     visual = ConnectXVisual(7, 6, 4)
     #     visual.play_real_time_game("X", "O", agent_first_column, agent_last_column, 100, 1)
 
-    def test_play_manual_against_agent(self):
-        visual = ConnectXVisual(7, 6, 4)
-        visual.play_manual_against_agent("Human", "AI", agent_first_column, True, 100, 0.2)
+    # def test_play_manual_against_agent(self):
+    #     visual = ConnectXVisual(7, 6, 4)
+    #     visual.play_manual_against_agent("Human", "AI", agent_first_column, True, 100, 0.2)
 
 if __name__ == "__main__":
     unittest.main()
