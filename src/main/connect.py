@@ -594,6 +594,7 @@ class ConnectXVisual:
         self.width = width
         self.height = height
         self.game_over = False
+        self.paused = False
 
     def update_board(self, match: ConnectXMatch):
         for col in range(match.COLUMNS):
@@ -659,6 +660,17 @@ class ConnectXVisual:
         self.result_label = tk.Label(self.root, text="")
         self.result_label.grid(row=self.rows+2, columnspan=self.columns)
 
+        self.root.bind("<Return>", self.toggle_pause)
+        self.root.bind("<space>", self.toggle_pause)
+
+    def toggle_pause(self, event):
+        self.paused = not self.paused
+        if self.paused:
+            self.state_label.config(text="Game paused")
+        else:
+            self.state_label.config(text="Game resumed")
+            self.play_next_move()
+
     def manual_start(self):
         self.root.mainloop()
 
@@ -694,7 +706,7 @@ class ConnectXVisual:
             agent_2_func (Callable): Function for the second agent.
             time_limit (int): Time limit for each move in seconds.
         """
-        game_with_agents = ConnectXMatchWithAgents(
+        self.game_with_agents = ConnectXMatchWithAgents(
             self.columns,
             self.rows,
             self.win_length,
@@ -706,17 +718,17 @@ class ConnectXVisual:
         )
 
         def play_next_move():
-            if game_with_agents.game.game_state == GameState.IN_PROGRESS:
-                game_with_agents.play_move_with_next_agent()
-                self.update_board(game_with_agents.game)
-                if game_with_agents.game.game_state == GameState.IN_PROGRESS:
+            if not self.paused and self.game_with_agents.game.game_state == GameState.IN_PROGRESS:
+                self.game_with_agents.play_move_with_next_agent()
+                self.update_board(self.game_with_agents.game)
+                if self.game_with_agents.game.game_state == GameState.IN_PROGRESS:
                     time_between_moves_for_visualization_milliseconds = time_between_moves_for_visualization_seconds * 1000
                     self.root.after(time_between_moves_for_visualization_milliseconds, play_next_move)
 
+        self.play_next_move = play_next_move
         self.setup(play_next_move)
         play_next_move()
         self.root.mainloop()
-
 
     def play_manual_against_agent(
         self, 
@@ -895,13 +907,3 @@ class ConnectXTournament:
         # Generate meta matchup reports
         for meta_matchup in self.meta_matchups:
             meta_matchup.generate_report(file_path=file_dir + f"/{meta_matchup.first_agent.name}_vs_{meta_matchup.second_agent.name}.txt")
-
-    def play_multiple_visuals(self, first_agent_name, second_agent_name, number_of_visuals: int):
-        rows: int = self.board_dimensions[0].rows
-        columns: int = self.board_dimensions[0].columns
-        for _ in range(number_of_visuals):
-            visual = ConnectXVisual(7, 6, 4)
-            visual.play_real_time_game(first_agent_name, second_agent_name, self.agents[0].func, self.agents[1].func, 1, 3)
-            visual = ConnectXVisual(7, 6, 4)
-            visual.play_real_time_game(second_agent_name, first_agent_name, self.agents[1].func, self.agents[0].func, 1, 3)
-
