@@ -5,6 +5,8 @@ from enum import Enum
 from typing import Tuple, List, Callable
 import threading
 import time
+import copy
+
 
 from typing import Callable, List, Dict
 
@@ -161,6 +163,9 @@ class ConnectXMatch:
             self.log.append(f"Player {player} tried to play in full column {column} and lost.")
             print(message)
             return False
+        # Make sure to convert the column to an integer
+        # At this point, we know the column is valid, but it may be a string, or another castable type.
+        column = int(column)
         # Make the actual move - modify the game board
         for row in range(0, self.ROWS):
             if self.board[column][row] is None:
@@ -246,8 +251,9 @@ class ConnectXMatchWithAgents:
         column_answer = None
         def agent_move():
             nonlocal column_answer
+            board_copy: np.ndarray = copy.deepcopy(self.game.board)
             opponent_name = self.game.get_other_player(player)
-            column_answer = func(self.game.board, self.game.WIN_LENGTH, opponent_name)
+            column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
 
         # Call the function in a thread
         func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
@@ -431,6 +437,148 @@ class Matchup:
 
 
 
+
+
+
+class BoardDimension:
+    def __init__(
+        self,
+        columns: int,
+        rows: int,
+    ):
+        self.columns: int = columns
+        self.rows: int = rows
+
+class Agent:
+    def __init__(
+        self,
+        name: str,
+        func: Callable
+    ):
+        self.name: str = name
+        self.func: Callable = func
+
+class MetaMatchup:
+    def __init__(
+        self,
+        board_dimensions: List[BoardDimension],
+        win_lengths: List[int],
+        first_agent: Agent,
+        second_agent: Agent,
+        turn_time_limit_s: int,
+        win_percentage_threshold_for_win: float,
+        number_of_games_per_matchup: int
+    ):
+        # Parameters
+        self.board_dimensions: List[BoardDimension] = board_dimensions
+        self.win_lengths: List[int] = win_lengths
+        self.first_agent: Agent = first_agent
+        self.second_agent: Agent = second_agent
+        self.turn_time_limit_s: int = turn_time_limit_s
+        self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
+        self.number_of_games_per_matchup: int = number_of_games_per_matchup
+
+        # Matchups
+        self.matchups: List[Matchup] = []
+        
+        # Analysis
+        self.overall_total_games: int = 0
+        self.overall_first_player_wins: int = 0
+        self.overall_second_player_wins: int = 0
+        self.overall_draws: int = 0
+        self.overall_percentage_first_player_wins: float = None
+        self.overall_percentage_second_player_wins: float = None
+        self.overall_percentage_draws: float = None
+        self.overall_winner: str = None
+    
+    def play_matchups(self):
+        for board_dimension in self.board_dimensions:
+            for win_length in self.win_lengths:
+                matchup = Matchup(
+                    board_dimension.columns,
+                    board_dimension.rows,
+                    win_length,
+                    self.first_agent.name,
+                    self.second_agent.name,
+                    self.first_agent.func,
+                    self.second_agent.func,
+                    self.turn_time_limit_s,
+                    self.win_percentage_threshold_for_win,
+                    self.number_of_games_per_matchup
+                )
+                matchup.play_matchup()
+                self.matchups.append(matchup)
+        self.analyse_matchups()
+
+    def analyse_matchups(self):
+        self.overall_total_games = sum(matchup.first_player_wins + matchup.second_player_wins + matchup.draws for matchup in self.matchups)
+        self.overall_first_player_wins = sum(matchup.first_player_wins for matchup in self.matchups)
+        self.overall_second_player_wins = sum(matchup.second_player_wins for matchup in self.matchups)
+        self.overall_draws = sum(matchup.draws for matchup in self.matchups)
+        self.overall_percentage_first_player_wins = (self.overall_first_player_wins / self.overall_total_games) * 100
+        self.overall_percentage_second_player_wins = (self.overall_second_player_wins / self.overall_total_games) * 100
+        self.overall_percentage_draws = (self.overall_draws / self.overall_total_games) * 100
+        # Decide the winner, if winner there is.
+        self.overall_winner = self.determine_overall_winner()
+        
+    def determine_overall_winner(self) -> str:
+        if self.overall_percentage_first_player_wins >= self.overall_percentage_second_player_wins + self.win_percentage_threshold_for_win:
+            return self.first_agent.name
+        elif self.overall_percentage_second_player_wins >= self.overall_percentage_first_player_wins + self.win_percentage_threshold_for_win:
+            return self.second_agent.name
+        else:
+            return NO_WINNER_MESSAGE
+
+    def generate_report(self, file_path: str):
+        """
+        Generate a report of the matchup and print it to a specified text file.
+
+        Args:
+            file_path (str): The path of the file to print the report to.
+
+        Raises:
+            Exception: If the matchup has not occurred yet.
+        """
+        if not hasattr(self, 'overall_winner'):
+            raise Exception("The meta matchup has not occurred yet. Please run the meta matchup before generating a report.")
+        
+        matchups_report_lines: List[str] = []
+        for matchup in self.matchups:
+            matchups_report_lines += matchup.get_report_lines()
+            matchups_report_lines.append("")
+
+        report_lines = [
+            "Connect X Meta Matchup Report",
+            "========================",
+            "Agents:",
+            f"First Agent: {self.first_agent.name}",
+            f"Second Agent: {self.second_agent.name}",
+            "",
+            "Results:",
+            f"Total Games: {self.overall_total_games}",
+            f"{self.first_agent.name}: {self.overall_first_player_wins} ({self.overall_percentage_first_player_wins})",
+            f"{self.second_agent.name}: {self.overall_second_player_wins} ({self.overall_percentage_second_player_wins})",
+            f"Draws: {self.overall_draws} ({self.overall_percentage_draws})",
+            "",
+            f"Winner: {self.overall_winner}",
+            "========================",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "Matchups:",
+            ""
+        ]
+        report_lines += matchups_report_lines
+        with open(file_path, 'w') as file:
+            file.write("\n".join(report_lines))
+
+
+
+
+
+
 class ConnectXVisual:
     def __init__(
         self,
@@ -608,142 +756,44 @@ class ConnectXVisual:
             play_next_move()
         self.root.mainloop()
 
-
-
-
-class BoardDimension:
-    def __init__(
-        self,
-        columns: int,
-        rows: int,
-    ):
-        self.columns: int = columns
-        self.rows: int = rows
-
-class Agent:
-    def __init__(
-        self,
-        name: str,
-        func: Callable
-    ):
-        self.name: str = name
-        self.func: Callable = func
-
-class MetaMatchup:
-    def __init__(
-        self,
-        board_dimensions: List[BoardDimension],
-        win_lengths: List[int],
+    def play_multiple_real_time_games(
+        self, 
         first_agent: Agent,
         second_agent: Agent,
-        turn_time_limit_s: int,
-        win_percentage_threshold_for_win: float,
-        number_of_games_per_matchup: int
+        agents_turn_time_limit_s: int,
+        time_between_moves_for_visualization_s: int,
+        number_of_games: int,
     ):
-        # Parameters
-        self.board_dimensions: List[BoardDimension] = board_dimensions
-        self.win_lengths: List[int] = win_lengths
-        self.first_agent: Agent = first_agent
-        self.second_agent: Agent = second_agent
-        self.turn_time_limit_s: int = turn_time_limit_s
-        self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
-        self.number_of_games_per_matchup: int = number_of_games_per_matchup
-
-        # Matchups
-        self.matchups: List[Matchup] = []
         
-        # Analysis
-        self.overall_total_games: int = 0
-        self.overall_first_player_wins: int = 0
-        self.overall_second_player_wins: int = 0
-        self.overall_draws: int = 0
-        self.overall_percentage_first_player_wins: float = None
-        self.overall_percentage_second_player_wins: float = None
-        self.overall_percentage_draws: float = None
-        self.overall_winner: str = None
-    
-    def play_matchups(self):
-        for board_dimension in self.board_dimensions:
-            for win_length in self.win_lengths:
-                matchup = Matchup(
-                    board_dimension.columns,
-                    board_dimension.rows,
-                    win_length,
-                    self.first_agent.name,
-                    self.second_agent.name,
-                    self.first_agent.func,
-                    self.second_agent.func,
-                    self.turn_time_limit_s,
-                    self.win_percentage_threshold_for_win,
-                    self.number_of_games_per_matchup
-                )
-                matchup.play_matchup()
-                self.matchups.append(matchup)
-        self.analyse_matchups()
-
-    def analyse_matchups(self):
-        self.overall_total_games = sum(matchup.first_player_wins + matchup.second_player_wins + matchup.draws for matchup in self.matchups)
-        self.overall_first_player_wins = sum(matchup.first_player_wins for matchup in self.matchups)
-        self.overall_second_player_wins = sum(matchup.second_player_wins for matchup in self.matchups)
-        self.overall_draws = sum(matchup.draws for matchup in self.matchups)
-        self.overall_percentage_first_player_wins = (self.overall_first_player_wins / self.overall_total_games) * 100
-        self.overall_percentage_second_player_wins = (self.overall_second_player_wins / self.overall_total_games) * 100
-        self.overall_percentage_draws = (self.overall_draws / self.overall_total_games) * 100
-        # Decide the winner, if winner there is.
-        self.overall_winner = self.determine_overall_winner()
-        
-    def determine_overall_winner(self) -> str:
-        if self.overall_percentage_first_player_wins >= self.overall_percentage_second_player_wins + self.win_percentage_threshold_for_win:
-            return self.first_agent.name
-        elif self.overall_percentage_second_player_wins >= self.overall_percentage_first_player_wins + self.win_percentage_threshold_for_win:
-            return self.second_agent.name
-        else:
-            return NO_WINNER_MESSAGE
-
-    def generate_report(self, file_path: str):
-        """
-        Generate a report of the matchup and print it to a specified text file.
-
-        Args:
-            file_path (str): The path of the file to print the report to.
-
-        Raises:
-            Exception: If the matchup has not occurred yet.
-        """
-        if not hasattr(self, 'overall_winner'):
-            raise Exception("The meta matchup has not occurred yet. Please run the meta matchup before generating a report.")
-        
-        matchups_report_lines: List[str] = []
-        for matchup in self.matchups:
-            matchups_report_lines += matchup.get_report_lines()
-            matchups_report_lines.append("")
-
-        report_lines = [
-            "Connect X Meta Matchup Report",
-            "========================",
-            "Agents:",
-            f"First Agent: {self.first_agent.name}",
-            f"Second Agent: {self.second_agent.name}",
-            "",
-            "Results:",
-            f"Total Games: {self.overall_total_games}",
-            f"{self.first_agent.name}: {self.overall_first_player_wins} ({self.overall_percentage_first_player_wins})",
-            f"{self.second_agent.name}: {self.overall_second_player_wins} ({self.overall_percentage_second_player_wins})",
-            f"Draws: {self.overall_draws} ({self.overall_percentage_draws})",
-            "",
-            f"Winner: {self.overall_winner}",
-            "========================",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "Matchups:",
-            ""
-        ]
-        report_lines += matchups_report_lines
-        with open(file_path, 'w') as file:
-            file.write("\n".join(report_lines))
+        for _ in range(int(number_of_games/2)):
+            visual = ConnectXVisual(7, 6, 4)
+            visual.play_real_time_game(
+                first_agent.name, 
+                second_agent.name, 
+                first_agent.func, 
+                second_agent.func, 
+                agents_turn_time_limit_s, 
+                time_between_moves_for_visualization_s
+            )
+            visual = ConnectXVisual(7, 6, 4)
+            visual.play_real_time_game(
+                second_agent.name,
+                first_agent.name,
+                second_agent.func,
+                first_agent.func,
+                agents_turn_time_limit_s,
+                time_between_moves_for_visualization_s
+            )
+        if number_of_games % 2 == 1:
+            visual = ConnectXVisual(7, 6, 4)
+            visual.play_real_time_game(
+                first_agent.name, 
+                second_agent.name, 
+                first_agent.func, 
+                second_agent.func, 
+                agents_turn_time_limit_s, 
+                time_between_moves_for_visualization_s
+            )
 
 
 
@@ -838,10 +888,11 @@ class ConnectXTournament:
             meta_matchup.generate_report(file_path=file_dir + f"/{meta_matchup.first_agent.name}_vs_{meta_matchup.second_agent.name}.txt")
 
     def play_multiple_visuals(self, first_agent_name, second_agent_name, number_of_visuals: int):
+        rows: int = self.board_dimensions[0].rows
+        columns: int = self.board_dimensions[0].columns
         for _ in range(number_of_visuals):
             visual = ConnectXVisual(7, 6, 4)
             visual.play_real_time_game(first_agent_name, second_agent_name, self.agents[0].func, self.agents[1].func, 1, 3)
             visual = ConnectXVisual(7, 6, 4)
             visual.play_real_time_game(second_agent_name, first_agent_name, self.agents[1].func, self.agents[0].func, 1, 3)
 
-    
