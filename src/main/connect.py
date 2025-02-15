@@ -232,6 +232,8 @@ class ConnectXMatchWithAgents:
         time_limit: int
     ):
         self.game: ConnectXMatch = ConnectXMatch(columns, rows, win_length, first_player_name, second_player_name)
+        self.first_player_name = first_player_name
+        self.second_player_name = second_player_name
         self.first_player_func: Callable = first_player_func
         self.second_player_func: Callable = second_player_func
         self.time_limit: float = time_limit
@@ -301,6 +303,9 @@ class ConnectXMatchWithAgents:
         """
         while self.game.game_state == GameState.IN_PROGRESS:
             self.play_move_with_next_agent()
+        if self.game.game_state in [GameState.WIN, GameState.DRAW, GameState.ILLEGAL_MOVE]:
+            self.first_player_func(self.game.board,self.game.WIN_LENGTH,self.first_player_name)
+            self.second_player_func(self.game.board,self.game.WIN_LENGTH,self.second_player_name)
         return self.game.winner
 
 
