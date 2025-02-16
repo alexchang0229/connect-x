@@ -25,23 +25,24 @@ sam = Agent("placeholder_3", random_move)
 
 
 ##### TOURNAMENT #####
-agents = [threshold_columnator, threshold_heuritic, nathaniel, alex, sam]
-board_dimensions = [
-    BoardDimension(7, 6), 
-    BoardDimension(8, 7),
-    BoardDimension(9, 8),
-    BoardDimension(10, 10)]
-win_lengths = [4, 5, 6]
-tournament: Tournament = Tournament(
-    board_dimensions,
-    win_lengths,
-    agents,
-    turn_time_limit_s=1,
-    win_percentage_threshold_for_win=5,
-    number_of_games_per_matchup=100
-)
-tournament.play_tournament()
-tournament.generate_reports_in_dir("results")
+def play_tournament():
+    agents = [threshold_columnator, threshold_heuritic, nathaniel, alex, sam]
+    board_dimensions = [
+        BoardDimension(7, 6), 
+        BoardDimension(8, 7),
+        BoardDimension(9, 8),
+        BoardDimension(10, 10)]
+    win_lengths = [4, 5, 6]
+    tournament: Tournament = Tournament(
+        board_dimensions,
+        win_lengths,
+        agents,
+        turn_time_limit_s=1,
+        win_percentage_threshold_for_win=5,
+        number_of_games_per_matchup=100
+    )
+    tournament.play_tournament()
+    tournament.generate_reports_in_dir("competition/week_2/results")
 
 
 
@@ -63,3 +64,8 @@ tournament.generate_reports_in_dir("results")
 # agent_1: Agent = Agent("Agent1", agent_first_column)
 # agent_2: Agent = Agent("Agent2", random_agent_1)
 # visual.play_multiple_real_time_games(agent_1, agent_2, 1, 2, 3)
+
+
+if __name__ == "__main__":
+    play_tournament()
+

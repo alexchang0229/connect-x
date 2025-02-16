@@ -37,8 +37,8 @@ class TestConnectXMatch:
         game: ConnectXMatch = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
         game.play_with_next_player(-1)
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "O"
-        assert game.previous_player_who_played is 'X'
+        assert game.winner == "O"
+        assert game.previous_player_who_played == 'X'
         
         # Play in a full column
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
@@ -47,22 +47,22 @@ class TestConnectXMatch:
         game.play_with_next_player(1)
         game.play_with_next_player(0)
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "X"
-        assert game.previous_player_who_played is 'O'
+        assert game.winner == "X"
+        assert game.previous_player_who_played == 'O'
 
         # Play None
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
         game.make_move(None, "X")
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "O"
-        assert game.previous_player_who_played is 'X'
+        assert game.winner == "O"
+        assert game.previous_player_who_played == 'X'
 
         # Play String
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
         game.make_move("string", "X")
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "O"
-        assert game.previous_player_who_played is 'X'
+        assert game.winner == "O"
+        assert game.previous_player_who_played == 'X'
 
 
     def test_horizontal_win(self, game: ConnectXMatch):
@@ -183,7 +183,7 @@ class TestConnectXMatch:
         assert game.board[0][0] == 'X'
         assert game.game_state == GameState.IN_PROGRESS
         assert game.winner is None
-        assert game.previous_player_who_played is 'X'
+        assert game.previous_player_who_played == 'X'
 
         # Test making a move with wrong name
         with pytest.raises(Exception):
@@ -202,15 +202,15 @@ class TestConnectXMatch:
             game.make_move(0, 'O')
         game.make_move(0, 'X')
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "O"
-        assert game.previous_player_who_played is 'X'
+        assert game.winner == "O"
+        assert game.previous_player_who_played == 'X'
         
         # Test making a move outside the board
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
         game.make_move(-1, 'X')
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "O"
-        assert game.previous_player_who_played is 'X'
+        assert game.winner == "O"
+        assert game.previous_player_who_played == 'X'
 
         # Test getting a winner
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
@@ -254,8 +254,8 @@ class TestConnectXMatch:
             game.play_with_next_player(0)
         game.play_with_next_player(0)
         assert game.game_state == GameState.ILLEGAL_MOVE
-        assert game.winner is "O"
-        assert game.previous_player_who_played is 'X'
+        assert game.winner == "O"
+        assert game.previous_player_who_played == 'X'
 
         # Test playing with the next player in a terminal state (win)
         game = ConnectXMatch(columns=7, rows=6, win_length=4, first_player_name="X", second_player_name="O")
@@ -417,7 +417,7 @@ class TestConnectXMatchup:
         assert matchup.percentage_first_player_wins == 100.0
         assert matchup.percentage_second_player_wins == 0.0
         assert matchup.percentage_draws == 0.0
-        assert matchup.winner is "agent_1"
+        assert matchup.winner == "agent_1"
 
         ### Equal strats
         matchup: Matchup = Matchup(
@@ -484,6 +484,76 @@ class TestConnectXMatchup:
 
 class TestMetaMatchup:
     def test_play_matchups(self):
+        board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
+        win_lengths = [4, 5]
+        first_agent = Agent("Agent1", agent_first_column)
+        second_agent = Agent("Agent2", agent_last_column)
+        meta_matchup: MetaMatchup = MetaMatchup(
+            board_dimensions,
+            win_lengths,
+            first_agent,
+            second_agent,
+            turn_time_limit_s=5,
+            win_percentage_threshold_for_win=10,
+            number_of_games_per_matchup=10
+        )
+        # Before playing matchups
+        assert meta_matchup.matchups == []
+        assert meta_matchup.overall_total_games == 0
+        assert meta_matchup.overall_first_player_wins == 0
+        assert meta_matchup.overall_second_player_wins == 0
+        assert meta_matchup.overall_draws == 0
+        assert meta_matchup.overall_percentage_first_player_wins is None
+        assert meta_matchup.overall_percentage_second_player_wins is None
+        assert meta_matchup.overall_percentage_draws is None
+        assert meta_matchup.overall_winner is None
+        # Play matchups
+        meta_matchup.play_matchups()
+        # After playing matchups
+        assert len(meta_matchup.matchups) == len(board_dimensions) * len(win_lengths)
+        assert meta_matchup.overall_total_games == len(board_dimensions) * len(win_lengths) * 10
+        assert meta_matchup.overall_first_player_wins + meta_matchup.overall_second_player_wins + meta_matchup.overall_draws == meta_matchup.overall_total_games
+        assert meta_matchup.overall_percentage_first_player_wins == 50.0
+        assert meta_matchup.overall_percentage_second_player_wins == 50.0
+        assert meta_matchup.overall_percentage_draws == 0.0
+        assert meta_matchup.overall_winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
+        matchup_1: Matchup = meta_matchup.matchups[0]
+        assert matchup_1.rows == board_dimensions[0].rows
+        assert matchup_1.columns == board_dimensions[0].columns
+        matchup_2: Matchup = meta_matchup.matchups[1]
+        assert matchup_2.rows == board_dimensions[0].rows
+        assert matchup_2.columns == board_dimensions[0].columns
+        matchup_3: Matchup = meta_matchup.matchups[2]
+        assert matchup_3.rows == board_dimensions[1].rows
+        assert matchup_3.columns == board_dimensions[1].columns
+        matchup_4: Matchup = meta_matchup.matchups[3]
+        assert matchup_4.rows == board_dimensions[1].rows
+        assert matchup_4.columns == board_dimensions[1].columns
+
+        # Play matchups with a clear winner
+        first_agent = Agent("Agent1", agent_first_column)
+        second_agent = Agent("Agent2", agent_empty)
+        meta_matchup: MetaMatchup = MetaMatchup(
+            board_dimensions,
+            win_lengths,
+            first_agent,
+            second_agent,
+            turn_time_limit_s=5,
+            win_percentage_threshold_for_win=10,
+            number_of_games_per_matchup=10
+        )
+        # Play matchups
+        meta_matchup.play_matchups()
+        # After playing matchups
+        assert len(meta_matchup.matchups) == len(board_dimensions) * len(win_lengths)
+        assert meta_matchup.overall_total_games == len(board_dimensions) * len(win_lengths) * 10
+        assert meta_matchup.overall_first_player_wins + meta_matchup.overall_second_player_wins + meta_matchup.overall_draws == meta_matchup.overall_total_games
+        assert meta_matchup.overall_percentage_first_player_wins == 100.0
+        assert meta_matchup.overall_percentage_second_player_wins == 0.0
+        assert meta_matchup.overall_percentage_draws == 0.0
+        assert meta_matchup.overall_winner == 'Agent1'
+
+    def test_play_parallel_matchups(self):
         board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
         win_lengths = [4, 5]
         first_agent = Agent("Agent1", agent_first_column)

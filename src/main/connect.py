@@ -6,6 +6,7 @@ from typing import Tuple, List, Callable
 import threading
 import copy
 import os
+import multiprocessing as mp
 
 
 from typing import Callable, List, Dict
@@ -515,6 +516,36 @@ class MetaMatchup:
                 self.matchups.append(matchup)
         self.analyse_matchups()
 
+    def play_matchup_in_process(matchup_data: Tuple[int, int, int, str, str, Callable, Callable, int, float, int], results_list: List[Matchup]):
+            """Worker function to run play_matchup() and store results."""
+            matchup = Matchup(*matchup_data)
+            matchup.play_matchup()
+            results_list.append(matchup)
+
+    def play_parallel_matchups(self):
+        with mp.Manager() as manager:
+            shared_results: List[Matchup] = manager.list()
+            matchups_data = []
+            for board_dimension in self.board_dimensions:
+                for win_length in self.win_lengths:
+                    matchup_data: Tuple[int, int, int, str, str, Callable, Callable, int, float, int] = (
+                        board_dimension.columns,
+                        board_dimension.rows,
+                        win_length,
+                        self.first_agent.name,
+                        self.second_agent.name,
+                        self.first_agent.func,
+                        self.second_agent.func,
+                        self.turn_time_limit_s,
+                        self.win_percentage_threshold_for_win,
+                        self.number_of_games_per_matchup
+                    )
+                    matchups_data.append(matchup_data)
+            with mp.Pool(mp.cpu_count()) as pool:
+                pool.starmap(MetaMatchup.play_matchup_in_process, [(matchup_data, shared_results) for matchup_data in matchups_data])
+            self.matchups = list(shared_results)
+        self.analyse_matchups()
+
     def analyse_matchups(self):
         self.overall_total_games = sum(matchup.first_player_wins + matchup.second_player_wins + matchup.draws for matchup in self.matchups)
         self.overall_first_player_wins = sum(matchup.first_player_wins for matchup in self.matchups)
@@ -623,7 +654,7 @@ class Tournament:
                 self.win_percentage_threshold_for_win,
                 self.number_of_games_per_matchup
             )
-            meta_matchup.play_matchups()
+            meta_matchup.play_parallel_matchups()
             self.meta_matchups.append(meta_matchup)
         self.analyse_tournament()
 
