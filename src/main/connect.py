@@ -215,6 +215,42 @@ class ConnectXMatch:
         rotated_arr = np.rot90(arr)
         return str(rotated_arr)
 
+    def __eq__(self, other):
+        if not isinstance(other, ConnectXMatch):
+            return False
+        return (
+            self.COLUMNS == other.COLUMNS and
+            self.ROWS == other.ROWS and
+            self.WIN_LENGTH == other.WIN_LENGTH and
+            self.FIRST_PLAYER_NAME == other.FIRST_PLAYER_NAME and
+            self.SECOND_PLAYER_NAME == other.SECOND_PLAYER_NAME and
+            np.array_equal(self.board, other.board) and
+            self.game_state == other.game_state and
+            self.winner == other.winner and
+            self.previous_player_who_played == other.previous_player_who_played and
+            self.moves_played == other.moves_played and
+            self.log == other.log
+        )
+
+    def copy(self):
+        return copy.deepcopy(self)
+    
+    def __deepcopy__(self, memo):
+        new_instance = ConnectXMatch(
+            self.COLUMNS,
+            self.ROWS,
+            self.WIN_LENGTH,
+            self.FIRST_PLAYER_NAME,
+            self.SECOND_PLAYER_NAME
+        )
+        new_instance.board = copy.deepcopy(self.board, memo)
+        new_instance.game_state = self.game_state
+        new_instance.winner = self.winner
+        new_instance.previous_player_who_played = self.previous_player_who_played
+        new_instance.moves_played = copy.deepcopy(self.moves_played, memo)
+        new_instance.log = copy.deepcopy(self.log, memo)
+        return new_instance
+
 
 
 
