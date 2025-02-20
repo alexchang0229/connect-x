@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+from mcts import mcts
 
 from src.main.connect import ConnectXMatch, GameState
 
@@ -26,3 +27,9 @@ def get_winning_move(match: ConnectXMatch, player: str) -> int:
     return None
 
         
+
+def play_using_mcts(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
+    match: ConnectXMatch = get_match_object(board, length_to_win, "X", opponent_name)
+    mcts_instance = mcts(timeLimit=1000)
+    bestAction = mcts_instance.search(initialState=match)
+    return bestAction

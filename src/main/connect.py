@@ -235,7 +235,7 @@ class ConnectXMatch:
     def copy(self):
         return copy.deepcopy(self)
     
-    def __deepcopy__(self, memo):
+    def deepcopy(self):
         new_instance = ConnectXMatch(
             self.COLUMNS,
             self.ROWS,
@@ -243,20 +243,41 @@ class ConnectXMatch:
             self.FIRST_PLAYER_NAME,
             self.SECOND_PLAYER_NAME
         )
-        new_instance.board = copy.deepcopy(self.board, memo)
+        new_instance.board = copy.deepcopy(self.board)
         new_instance.game_state = self.game_state
         new_instance.winner = self.winner
         new_instance.previous_player_who_played = self.previous_player_who_played
-        new_instance.moves_played = copy.deepcopy(self.moves_played, memo)
-        new_instance.log = copy.deepcopy(self.log, memo)
+        new_instance.moves_played = copy.deepcopy(self.moves_played)
+        new_instance.log = copy.deepcopy(self.log)
         return new_instance
+    
+    def __deepcopy__(self, memo):
+        return self.deepcopy()
 
-    def getLegalActions(self) -> List[int]:
+    def getPossibleActions(self) -> List[int]:
         legal_actions = []
         for column in range(self.COLUMNS):
             if not all(self.board[column] != None):
                 legal_actions.append(column)
         return legal_actions
+    
+    def takeAction(self, action: int):
+        new_match: ConnectXMatch = self.deepcopy()
+        if self.previous_player_who_played is None:
+            new_match.make_move(action, self.FIRST_PLAYER_NAME)
+        new_match.make_move(action, self.get_other_player(self.previous_player_who_played))
+        return new_match
+    
+    def isTerminal(self) -> bool:
+        return self.game_state != GameState.IN_PROGRESS
+    
+    def getReward(self) -> int:
+        if self.game_state == GameState.WIN:
+            return 1 if self.winner == self.FIRST_PLAYER_NAME else -1
+        elif self.game_state == GameState.DRAW:
+            return 0
+        else:
+            raise Exception("Game is not in terminal state. Cannot get reward.")
 
 
 
