@@ -227,9 +227,9 @@ class ConnectXMatch:
             np.array_equal(self.board, other.board) and
             self.game_state == other.game_state and
             self.winner == other.winner and
-            self.previous_player_who_played == other.previous_player_who_played and
-            self.moves_played == other.moves_played and
-            self.log == other.log
+            self.previous_player_who_played == other.previous_player_who_played
+            # self.moves_played == other.moves_played and
+            # self.log == other.log
         )
 
     def copy(self):
