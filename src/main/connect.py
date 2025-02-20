@@ -251,6 +251,13 @@ class ConnectXMatch:
         new_instance.log = copy.deepcopy(self.log, memo)
         return new_instance
 
+    def getLegalActions(self) -> List[int]:
+        legal_actions = []
+        for column in range(self.COLUMNS):
+            if not all(self.board[column] != None):
+                legal_actions.append(column)
+        return legal_actions
+
 
 
 
