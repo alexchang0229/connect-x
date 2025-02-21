@@ -2,6 +2,8 @@ import unittest
 import pytest
 import random
 import os
+import copy
+import numpy as np
 
 from src.main.connect import (
     GameState, 
@@ -274,7 +276,74 @@ class TestConnectXMatch:
         assert game.winner is None
         assert game.previous_player_who_played == 'O'
 
+    def test_deepcopy(self):
+        # Create an instance of ConnectXMatch
+        original_match = ConnectXMatch(7, 6, 4, "Player1", "Player2")
+        
+        # Make some moves
+        original_match.make_move(0, "Player1")
+        original_match.make_move(1, "Player2")
+        original_match.make_move(0, "Player1")
+        
+        # Create a deep copy of the original match
+        copied_match = copy.deepcopy(original_match)
+        
+        # Check that the copied match is equal to the original match
+        assert np.array_equal(original_match.board, copied_match.board)
+        assert original_match.game_state == copied_match.game_state
+        assert original_match.winner == copied_match.winner
+        assert original_match.previous_player_who_played == copied_match.previous_player_who_played
+        assert original_match.moves_played == copied_match.moves_played
+        assert original_match.log == copied_match.log
+        
+        # Modify the copied match and check that the original match is not affected
+        copied_match.make_move(2, "Player2")
+        assert not np.array_equal(original_match.board, copied_match.board)
+        assert original_match.moves_played != copied_match.moves_played
+        assert original_match.log != copied_match.log
 
+    def test_eq(self):
+        match1 = ConnectXMatch(7, 6, 4, "Player1", "Player2")
+        match2 = ConnectXMatch(7, 6, 4, "Player1", "Player2")
+        assert match1 == match2
+
+        match1.make_move(0, "Player1")
+        assert match1 != match2
+
+        match2.make_move(0, "Player1")
+        assert match1 == match2
+
+    def test_copy(self):
+        original_match = ConnectXMatch(7, 6, 4, "Player1", "Player2")
+        original_match.make_move(0, "Player1")
+        copied_match = original_match.copy()
+
+        assert original_match == copied_match
+
+        copied_match.make_move(1, "Player2")
+        assert original_match != copied_match
+
+    def test_get_legal_actions(self, game: ConnectXMatch):
+        game: ConnectXMatch = ConnectXMatch(columns=7, rows=1, win_length=4, first_player_name="X", second_player_name="O")
+        # Initially, all columns should be legal actions
+        assert game.getLegalActions() == list(range(game.COLUMNS))
+
+        # Fill up a column and check if it's removed from legal actions
+        # Have to alternate 
+        game.make_move(0, 'X')
+        assert 0 not in game.getLegalActions()
+
+        # Ensure other columns are still legal
+        assert set(game.getLegalActions()) == set(range(1, game.COLUMNS))
+
+        # Fill up all columns and check if no legal actions remain
+        game.make_move(1, 'O')
+        game.make_move(2, 'X')
+        game.make_move(3, 'O')
+        game.make_move(4, 'X')
+        game.make_move(5, 'O')
+        game.make_move(6, 'X')
+        assert game.getLegalActions() == []
 
 def agent_first_column(board, win_length, opponent_name):
     # Simple agent that always picks the first available column
