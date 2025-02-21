@@ -13,7 +13,7 @@ Implement the following functions:
 import numpy as np
 
 def get_name():
-    return "example_agent"
+    return "weak_1"
 
 def play(board: np.ndarray, length_to_win: int) -> int:
     # Get the number of columns and rows
