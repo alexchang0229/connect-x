@@ -36,7 +36,7 @@ def play_using_mcts(board: np.ndarray, length_to_win: int, opponent_name: str, t
 
 
 def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
-    best_action: int = play_using_mcts(board, length_to_win, opponent_name, 1000)
+    best_action: int = play_using_mcts(board, length_to_win, opponent_name, 2000)
     return best_action
 
 

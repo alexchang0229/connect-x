@@ -326,15 +326,15 @@ class TestConnectXMatch:
     def test_get_legal_actions(self, game: ConnectXMatch):
         game: ConnectXMatch = ConnectXMatch(columns=7, rows=1, win_length=4, first_player_name="X", second_player_name="O")
         # Initially, all columns should be legal actions
-        assert game.getLegalActions() == list(range(game.COLUMNS))
+        assert game.getPossibleActions() == list(range(game.COLUMNS))
 
         # Fill up a column and check if it's removed from legal actions
         # Have to alternate 
         game.make_move(0, 'X')
-        assert 0 not in game.getLegalActions()
+        assert 0 not in game.getPossibleActions()
 
         # Ensure other columns are still legal
-        assert set(game.getLegalActions()) == set(range(1, game.COLUMNS))
+        assert set(game.getPossibleActions()) == set(range(1, game.COLUMNS))
 
         # Fill up all columns and check if no legal actions remain
         game.make_move(1, 'O')
@@ -343,7 +343,7 @@ class TestConnectXMatch:
         game.make_move(4, 'X')
         game.make_move(5, 'O')
         game.make_move(6, 'X')
-        assert game.getLegalActions() == []
+        assert game.getPossibleActions() == []
 
 def agent_first_column(board, win_length, opponent_name):
     # Simple agent that always picks the first available column
