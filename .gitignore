@@ -9,3 +9,4 @@ test_tournament_reports
 test_tournament_reports/*
 *.log
 test.txt
+*big_learner_learning_table*

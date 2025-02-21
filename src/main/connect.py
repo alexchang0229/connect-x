@@ -317,10 +317,13 @@ class ConnectXMatchWithAgents:
         # Create a nested function to run the agent function
         column_answer = None
         def agent_move():
-            nonlocal column_answer
-            board_copy: np.ndarray = copy.deepcopy(self.game.board)
-            opponent_name = self.game.get_other_player(player)
-            column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
+            try:
+                nonlocal column_answer
+                board_copy: np.ndarray = copy.deepcopy(self.game.board)
+                opponent_name = self.game.get_other_player(player)
+                column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
+            except:
+                column_answer = None
 
         # Call the function in a thread
         func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
@@ -592,6 +595,7 @@ class MetaMatchup:
             matchups_data = []
             for board_dimension in self.board_dimensions:
                 for win_length in self.win_lengths:
+                    print(f"Playing matchup between {self.first_agent.name} and {self.second_agent.name}")
                     matchup_data: Tuple[int, int, int, str, str, Callable, Callable, int, float, int] = (
                         board_dimension.columns,
                         board_dimension.rows,
@@ -707,8 +711,9 @@ class Tournament:
         self.agents_metamatchup_wins[NO_WINNER_STATE] = 0
         self.overall_winner: str = None
 
-    def play_tournament(self):
+    def play_tournament(self, file_dir: str = None):
         for agent_1, agent_2 in itertools.combinations(self.agents, 2):
+            print(f"Playing meta matchup between {agent_1.name} and {agent_2.name}")
             meta_matchup = MetaMatchup(
                 self.board_dimensions,
                 self.win_lengths,
@@ -719,6 +724,11 @@ class Tournament:
                 self.number_of_games_per_matchup
             )
             meta_matchup.play_parallel_matchups()
+            if file_dir is not None:
+                # If the directory does not exist, create it.
+                if not os.path.exists(file_dir):
+                    os.makedirs(file_dir)
+                meta_matchup.generate_report(file_path=file_dir + f"/{agent_1.name}_vs_{agent_2.name}.txt")
             self.meta_matchups.append(meta_matchup)
         self.analyse_tournament()
 
