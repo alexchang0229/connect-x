@@ -12,8 +12,8 @@ player_3 = columnator_and_heuritic.columnator
 # 5 games between player 1 and player 2
 for i in range(2):
     visual = ConnectXVisual(7, 6, 4)
-    visual.play_real_time_game(player_1_name, player_2_name, player_1, player_2, 3)
-    visual.play_real_time_game(player_2_name, player_1_name, player_2, player_1, 3)
+    visual.play_real_time_game(player_1_name, player_2_name, player_1, player_2, 1)
+    visual.play_real_time_game(player_2_name, player_1_name, player_2, player_1, 1)
 
 # 5 games between player 1 and player 3
 for i in range(5):

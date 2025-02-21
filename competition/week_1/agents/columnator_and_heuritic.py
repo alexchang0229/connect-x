@@ -62,7 +62,6 @@ def heuritic(board, win_length, opponent_name):
         np.argmax(cell_scores, axis=None), cell_scores.shape
     )
     answer = max_score_index[0]
-    print(answer)
     answer = int(answer)
     return answer
 

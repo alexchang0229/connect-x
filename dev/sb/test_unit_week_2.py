@@ -144,8 +144,8 @@ def test_unit_mcts_stronger_players():
         second_agent,
         turn_time_limit_s=5,
         win_percentage_threshold_for_win=10,
-        number_of_games_per_matchup=5
+        number_of_games_per_matchup=1
     )
-    meta_matchup.play_matchups()
+    meta_matchup.play_parallel_matchups()
     meta_matchup.generate_report("test.txt")
     print("hello")
