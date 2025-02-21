@@ -324,22 +324,23 @@ class ConnectXMatchWithAgents:
 
         # Call the function in a thread
         func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
-        move_thread = threading.Thread(target=agent_move)
-        move_thread.start()
+        # move_thread = threading.Thread(target=agent_move)
+        # move_thread.start()
         # Start the thread and wait until the function returns or the time limit is exceeded.
-        move_thread.join(timeout=self.time_limit)
+        # move_thread.join(timeout=self.time_limit)
         # UPDATE STATE FOR TIME LIMIT EXCEEDED
-        if move_thread.is_alive():
-            self.game.game_state = GameState.TIME_LIMIT_EXCEEDED
-            self.game.winner = self.game.get_other_player(player)
-            self.previous_player_who_played = player
-            message = f"Player {player} exceeded the time limit and lost."
-            self.game.log.append(message)
-            print(message)
-            return GameState.TIME_LIMIT_EXCEEDED
-        else:
+        # if move_thread.is_alive():
+        #     self.game.game_state = GameState.TIME_LIMIT_EXCEEDED
+        #     self.game.winner = self.game.get_other_player(player)
+        #     self.previous_player_who_played = player
+        #     message = f"Player {player} exceeded the time limit and lost."
+        #     self.game.log.append(message)
+        #     print(message)
+        #     return GameState.TIME_LIMIT_EXCEEDED
+        # else:
             # If the thread finished on time, make the move
-            return self.game.make_move(column_answer, player)
+        agent_move()
+        return self.game.make_move(column_answer, player)
         
     def play_move_with_next_agent(self) -> str:
         """
