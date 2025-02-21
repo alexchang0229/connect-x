@@ -2,7 +2,6 @@ import random
 from src.main.connect import ConnectXVisual, Agent, Matchup
 import numpy as np
 import pickle
-from heuritic import heuritic
 
 class BIGLEARNER:
     def __init__(self):
@@ -82,7 +81,7 @@ class BIGLEARNER:
     def new_agent_who_dis(self):
         return "Big Learner"
 
-    def take_turn(self, board, win_length, opponent_name):
+    def play(self, board, win_length, opponent_name):
         reward = self.check_reward(board, win_length)
 
         available_actions = [col for col in range(board.shape[0]) if None in board[col]]
@@ -123,56 +122,4 @@ class BIGLEARNER:
         self.prev_action = action
         self.prev_board = np.copy(board)
 
-        # self.courage = max(self.courage * 0.9,self.min_courage)
         return action
-
-
-# Random agent that picks a random column
-def get_random_agent_1_name():
-    return "Random Agent 1"
-
-
-def random_agent_1(board, win_length, opponent_name):
-    available_actions = [col for col in range(board.shape[0]) if None in board[col]]
-    if len(available_actions) > 0:
-        return random.choice(available_actions)
-    else:
-        return
-
-big_learner = BIGLEARNER()
-big_learner.load_learning_table()
-##### Visualizing the game ######
-# # Playing a game manually
-# visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
-# visual.play_manual_game("X", "O")
-
-# # Play a game against an agent
-# visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
-# visual.play_manual_against_agent("Human", "AI", agent_first_column, True, 1, 0.2)
-
-# # Visualize a game between two agents
-# visual = ConnectXVisual(7, 6, 4, 100, 100)
-# visual.play_real_time_game("X", "O", agent_first_column, random_agent_1, 1, 2)
-
-# Visualize X games between two agents (will alternate the starting player)
-# visual = ConnectXVisual(7, 6, 4, 100, 100)
-# agent_1: Agent = Agent("Big Learner", big_learner.take_turn)
-# agent_2: Agent = Agent("heuritic", heuritic)
-# visual.play_multiple_real_time_games(agent_1, agent_2, 1, 2, 1)
-
-matchup: Matchup = Matchup(
-    7,
-    6,
-    4,
-    big_learner.new_agent_who_dis(),
-    "heuritic",
-    big_learner.take_turn,
-    heuritic,
-    1,
-    5,
-    100,
-)
-# Play a matchup
-matchup.play_matchup()
-print("hello")
-big_learner.save_learing_table()
