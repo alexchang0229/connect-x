@@ -92,9 +92,20 @@ def agent_last_column(board, win_length, opponent_name):
 
 ##### Example: Playing a matchup between multiple agents #####
 # Create a matchup
-matchup: Matchup = Matchup(7, 6, 4, get_first_column_name(), get_random_agent_1_name(), agent_first_column, random_agent_1, 1, 5, 10)
+number_of_games = 10
+board_dim = BoardDimension(7, 6)
+agent_1 = Agent(get_first_column_name(), agent_first_column)
+agent_2 = Agent(get_random_agent_1_name(), random_agent_1)
+matchup: Matchup = Matchup(
+    board_dim,
+    4,
+    agent_1,
+    agent_2,
+    1,
+    5
+)
 # Play a matchup
-matchup.play_matchup()
+matchup.play_n_games(number_of_games)
 # Generate a report
 matchup.generate_report("first_column_vs_random_agent_1.txt")
 

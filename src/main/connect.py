@@ -31,6 +31,7 @@ class GameState(str, Enum):
     IN_PROGRESS = "IN_PROGRESS"
     ILLEGAL_MOVE = "ILLEGAL_MOVE"
     TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
+    AGENT_ERROR = "AGENT_ERROR"
 
 
 
@@ -66,6 +67,28 @@ class ConnectXMatch:
         if player == self.FIRST_PLAYER_NAME:
             return self.SECOND_PLAYER_NAME
         return self.FIRST_PLAYER_NAME
+
+    def register_agent_error(self, player: str, error_message: str) -> None:
+        """
+        Register an error that occurred during an agent's move.
+        The player who made the error automatically loses the game.
+        
+        Args:
+            player (str): The player who made the error.
+            error_message (str): The error message.
+            
+        Returns:
+            None
+        """
+        # Update game state
+        self.game_state = GameState.AGENT_ERROR
+        self.winner = self.get_other_player(player)
+        self.previous_player_who_played = player
+        
+        # Add log messages
+        message = f"Player {player} caused an error and lost: {error_message}"
+        self.log.append(message)
+        print(message)
 
     def check_illegal_move(self, column: int, player: str) -> Tuple[GameState, str]:
         # Check if player exists
@@ -294,7 +317,8 @@ class ConnectXMatchWithAgents:
         second_player_name: str,
         first_player_func: Callable,
         second_player_func: Callable,
-        time_limit: int
+        time_limit: int,
+        enable_thread_protection: bool = True
     ):
         self.game: ConnectXMatch = ConnectXMatch(columns, rows, win_length, first_player_name, second_player_name)
         self.first_player_name = first_player_name
@@ -302,11 +326,13 @@ class ConnectXMatchWithAgents:
         self.first_player_func: Callable = first_player_func
         self.second_player_func: Callable = second_player_func
         self.time_limit: float = time_limit
+        self.enable_thread_protection: bool = enable_thread_protection
 
     def play_move_with_agent(self, player: str) -> bool:
         """
         This method plays a move with the agent specified by the player argument.
-        This method creates a new thread to enforce the time limit.
+        This method creates a new thread to enforce the time limit when enable_thread_protection is True.
+        Otherwise, it calls the agent function directly.
 
         Args:
             player (str): The player who is making the move.
@@ -314,33 +340,56 @@ class ConnectXMatchWithAgents:
         Returns:
             bool: True if the game goes on, False otherwise.
         """
-        # Create a nested function to run the agent function
-        column_answer = None
-        def agent_move():
-            nonlocal column_answer
-            board_copy: np.ndarray = copy.deepcopy(self.game.board)
-            opponent_name = self.game.get_other_player(player)
-            column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
-
-        # Call the function in a thread
+        # Get the appropriate function for the player
         func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
-        move_thread = threading.Thread(target=agent_move)
-        move_thread.start()
-        # Start the thread and wait until the function returns or the time limit is exceeded.
-        move_thread.join(timeout=self.time_limit)
-        # UPDATE STATE FOR TIME LIMIT EXCEEDED
-        if move_thread.is_alive():
-            self.game.game_state = GameState.TIME_LIMIT_EXCEEDED
-            self.game.winner = self.game.get_other_player(player)
-            self.previous_player_who_played = player
-            message = f"Player {player} exceeded the time limit and lost."
-            self.game.log.append(message)
-            print(message)
-            return GameState.TIME_LIMIT_EXCEEDED
-        else:
+        
+        if self.enable_thread_protection:
+            # Create a nested function to run the agent function
+            column_answer = None
+            agent_error = None
+            
+            def agent_move():
+                nonlocal column_answer, agent_error
+                try:
+                    board_copy: np.ndarray = copy.deepcopy(self.game.board)
+                    opponent_name = self.game.get_other_player(player)
+                    column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
+                except Exception as e:
+                    agent_error = str(e)
+
+            # Call the function in a thread
+            move_thread = threading.Thread(target=agent_move)
+            move_thread.start()
+            # Start the thread and wait until the function returns or the time limit is exceeded.
+            move_thread.join(timeout=self.time_limit)
+            
+            # Handle agent error if it occurred
+            if agent_error is not None:
+                self.game.register_agent_error(player, agent_error)
+                return False
+                
+            # UPDATE STATE FOR TIME LIMIT EXCEEDED
+            if move_thread.is_alive():
+                self.game.game_state = GameState.TIME_LIMIT_EXCEEDED
+                self.game.winner = self.game.get_other_player(player)
+                self.previous_player_who_played = player
+                message = f"Player {player} exceeded the time limit and lost."
+                self.game.log.append(message)
+                print(message)
+                return GameState.TIME_LIMIT_EXCEEDED
             # If the thread finished on time, make the move
             return self.game.make_move(column_answer, player)
-        
+        else:
+            # Call the agent function directly without thread protection
+            try:
+                board_copy: np.ndarray = copy.deepcopy(self.game.board)
+                opponent_name = self.game.get_other_player(player)
+                column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
+                return self.game.make_move(column_answer, player)
+            except Exception as e:
+                self.game.register_agent_error(player, str(e))
+                return False
+
     def play_move_with_next_agent(self) -> str:
         """
         This method plays a move with the agent specified by the player argument.
@@ -368,6 +417,24 @@ class ConnectXMatchWithAgents:
         """
         while self.game.game_state == GameState.IN_PROGRESS:
             self.play_move_with_next_agent()
+        
+        # After the game is over, inform both agents about the final state
+        try:
+            # Call first agent with final state
+            board_copy: np.ndarray = copy.deepcopy(self.game.board)
+            self.first_player_func(board_copy, self.game.WIN_LENGTH, self.second_player_name)
+        except Exception as e:
+            # Ignore any errors that might occur
+            print(f"Error when informing {self.first_player_name} about final state: {e}")
+            
+        try:
+            # Call second agent with final state
+            board_copy: np.ndarray = copy.deepcopy(self.game.board)
+            self.second_player_func(board_copy, self.game.WIN_LENGTH, self.first_player_name)
+        except Exception as e:
+            # Ignore any errors that might occur
+            print(f"Error when informing {self.second_player_name} about final state: {e}")
+            
         return self.game.winner
 
 
@@ -405,18 +472,15 @@ class Matchup:
         second_agent: Agent,
         time_limit: int,
         win_percentage_threshold_for_win: float,
-        number_of_games: int
+        enable_thread_protection: bool = True
     ):
-        self.columns: int = board_dimension.columns
-        self.rows: int = board_dimension.rows
+        self.board_dimension: BoardDimension = board_dimension
         self.win_length: int = win_length
-        self.first_player_name: str = first_agent.name
-        self.second_player_name: str = second_agent.name
-        self.first_player_func: Callable = first_agent.func
-        self.second_player_func: Callable = second_agent.func
+        self.first_agent: Agent = first_agent
+        self.second_agent: Agent = second_agent
         self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
         self.time_limit: float = time_limit
-        self.number_of_games: int = number_of_games
+        self.enable_thread_protection: bool = enable_thread_protection
 
         self.first_player_wins: int = 0
         self.second_player_wins: int = 0
@@ -430,69 +494,156 @@ class Matchup:
         self.percentage_draws: float = None
         self.winner: str = None
 
-    def switch_players(self, current_player: str):
-        if current_player == self.first_player_name:
-            return self.second_player_name, self.first_player_name, self.second_player_func, self.first_player_func
-        return self.first_player_name, self.second_player_name, self.first_player_func, self.second_player_func
-
-
-    def play_matchup(self) -> str:
-        current_player: str = self.first_player_name
-        current_player_function: Callable = self.first_player_func
-        opponent_player: str = self.second_player_name
-        opponent_player_function: Callable = self.second_player_func
-        for i in range(self.number_of_games):
+    def play_n_games(self, number_of_games: int):
+        current_agent: Agent = self.first_agent
+        opponent_agent: Agent = self.second_agent
+        
+        for i in range(number_of_games):
             print(f"Playing game: {i}")
             game = ConnectXMatchWithAgents(
-                self.columns,
-                self.rows,
+                self.board_dimension.columns,
+                self.board_dimension.rows,
                 self.win_length,
-                current_player,
-                opponent_player,
-                current_player_function,
-                opponent_player_function,
-                self.time_limit
+                current_agent.name,
+                opponent_agent.name,
+                current_agent.func,
+                opponent_agent.func,
+                self.time_limit,
+                self.enable_thread_protection
             )
             winner = game.play_full_game()
-            if winner == self.first_player_name:
+            if winner == self.first_agent.name:
                 self.first_player_wins += 1
                 if len(self.saved_player_1_games) < 5:
                     self.saved_player_1_games.append(game.game)
-            elif winner == self.second_player_name:
+            elif winner == self.second_agent.name:
                 self.second_player_wins += 1
                 if len(self.saved_player_2_games) < 5:
                     self.saved_player_2_games.append(game.game)
             else:
                 self.draws += 1
-            current_player, opponent_player, current_player_function, opponent_player_function = self.switch_players(current_player)
-        return self.analyse_matchup(self.first_player_wins, self.second_player_wins, self.draws)
-    
-    def analyse_matchup(self, first_player_wins, second_player_wins, draws):
-        self.percentage_first_player_wins: float = (first_player_wins / (first_player_wins + second_player_wins + draws)) * 100
-        self.percentage_second_player_wins: float = (second_player_wins / (first_player_wins + second_player_wins + draws)) * 100
-        self.percentage_draws: float = (draws / (first_player_wins + second_player_wins + draws)) * 100
+            
+            # Update analytics after each game
+            self.update_analytics()
+            
+            # Switch players
+            current_agent, opponent_agent = opponent_agent, current_agent
+            
+    @staticmethod
+    def _play_single_game(game_index: int, board_dimension: BoardDimension, win_length: int, 
+                         first_agent: Agent, second_agent: Agent, time_limit: float, 
+                         enable_thread_protection: bool, start_with_first_agent: bool) -> Tuple[str, ConnectXMatch]:
+        """
+        Worker function to play a single game for parallelism.
+        
+        Returns:
+            Tuple[str, ConnectXMatch]: The winner of the game and the game object
+        """
+        print(f"Playing game: {game_index}")
+        
+        if start_with_first_agent:
+            current_agent = first_agent
+            opponent_agent = second_agent
+        else:
+            current_agent = second_agent
+            opponent_agent = first_agent
+            
+        game = ConnectXMatchWithAgents(
+            board_dimension.columns,
+            board_dimension.rows,
+            win_length,
+            current_agent.name,
+            opponent_agent.name,
+            current_agent.func,
+            opponent_agent.func,
+            time_limit,
+            enable_thread_protection
+        )
+        
+        winner = game.play_full_game()
+        return (winner, game.game)
+            
+    def play_n_games_with_parallelism(self, number_of_games: int, num_processes: int = None):
+        """
+        Play multiple games in parallel using multiprocessing.
+        
+        Args:
+            number_of_games (int): Number of games to play
+            num_processes (int, optional): Number of processes to use. Defaults to CPU count.
+        """ 
+        if num_processes is None:
+            num_processes = mp.cpu_count()
+        
+        # Prepare arguments for each game, alternating which player starts
+        game_args = []
+        for i in range(number_of_games):
+            start_with_first_agent = (i % 2 == 0)  # Alternate starting player
+            game_args.append((
+                i,  # game_index
+                self.board_dimension,  # board_dimension
+                self.win_length,  # win_length
+                self.first_agent,  # first_agent
+                self.second_agent,  # second_agent
+                self.time_limit,  # time_limit
+                self.enable_thread_protection,  # enable_thread_protection
+                start_with_first_agent  # start_with_first_agent
+            ))
+        
+        # Play games in parallel
+        with mp.Pool(processes=num_processes) as pool:
+            results = pool.starmap(Matchup._play_single_game, game_args)
+        
+        # Process results
+        for winner, game in results:
+            if winner == self.first_agent.name:
+                self.first_player_wins += 1
+                if len(self.saved_player_1_games) < 5:
+                    self.saved_player_1_games.append(game)
+            elif winner == self.second_agent.name:
+                self.second_player_wins += 1
+                if len(self.saved_player_2_games) < 5:
+                    self.saved_player_2_games.append(game)
+            else:
+                self.draws += 1
+        
+        # Update analytics after all games
+        self.update_analytics()
+
+    def update_analytics(self):
+        total_games = self.first_player_wins + self.second_player_wins + self.draws
+        if total_games == 0:
+            self.percentage_first_player_wins = 0.0
+            self.percentage_second_player_wins = 0.0
+            self.percentage_draws = 0.0
+            self.winner = NO_WINNER_MESSAGE
+            return self.winner
+            
+        self.percentage_first_player_wins = (self.first_player_wins / total_games) * 100
+        self.percentage_second_player_wins = (self.second_player_wins / total_games) * 100
+        self.percentage_draws = (self.draws / total_games) * 100
         # Decide the winner, if winner there is.
-        self.winner: str = self.determine_winner()
+        self.winner = self.determine_winner()
         return self.winner
 
     def determine_winner(self) -> str:
         if self.percentage_first_player_wins >= self.percentage_second_player_wins + self.win_percentage_threshold_for_win:
-            return self.first_player_name
+            return self.first_agent.name
         elif self.percentage_second_player_wins >= self.percentage_first_player_wins + self.win_percentage_threshold_for_win:
-            return self.second_player_name
+            return self.second_agent.name
         else:
             return NO_WINNER_MESSAGE
         
     def get_report_lines(self) -> List[str]:
+        total_games = self.first_player_wins + self.second_player_wins + self.draws
         return [
             "Connect X Matchup Report",
             "========================",
-            f"Columns: {self.columns}",
-            f"Rows: {self.rows}",
+            f"Columns: {self.board_dimension.columns}",
+            f"Rows: {self.board_dimension.rows}",
             f"Win Length: {self.win_length}",
-            f"First Player: {self.first_player_name}",
-            f"Second Player: {self.second_player_name}",
-            f"Number of Games: {self.number_of_games}",
+            f"First Player: {self.first_agent.name}",
+            f"Second Player: {self.second_agent.name}",
+            f"Total Games Played: {total_games}",
             f"Time Limit: {self.time_limit} seconds",
             f"Win Percentage Threshold for Win: {self.win_percentage_threshold_for_win}",
             "",
@@ -535,7 +686,8 @@ class MetaMatchup:
         second_agent: Agent,
         turn_time_limit_s: int,
         win_percentage_threshold_for_win: float,
-        number_of_games_per_matchup: int
+        number_of_games_per_matchup: int,
+        enable_thread_protection: bool = True
     ):
         # Parameters
         self.board_dimensions: List[BoardDimension] = board_dimensions
@@ -545,6 +697,7 @@ class MetaMatchup:
         self.turn_time_limit_s: int = turn_time_limit_s
         self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
         self.number_of_games_per_matchup: int = number_of_games_per_matchup
+        self.enable_thread_protection: bool = enable_thread_protection
 
         # Matchups
         self.matchups: List[Matchup] = []
@@ -569,17 +722,18 @@ class MetaMatchup:
                     self.second_agent,
                     self.turn_time_limit_s,
                     self.win_percentage_threshold_for_win,
-                    self.number_of_games_per_matchup
+                    self.enable_thread_protection
                 )
-                matchup.play_matchup()
+                matchup.play_n_games(self.number_of_games_per_matchup)
                 self.matchups.append(matchup)
         self.analyse_matchups()
 
-    def play_matchup_in_process(matchup_data: Tuple[BoardDimension, int, Agent, Agent, int, float, int], results_list: List[Matchup]):
-            """Worker function to run play_matchup() and store results."""
-            matchup = Matchup(*matchup_data)
-            matchup.play_matchup()
-            results_list.append(matchup)
+    def play_matchup_in_process(matchup_data: Tuple[BoardDimension, int, Agent, Agent, int, float, int, bool], results_list: List[Matchup]):
+        """Worker function to run play_matchup() and store results."""
+        board_dimension, win_length, first_agent, second_agent, time_limit, win_percentage_threshold, num_games, enable_thread_protection = matchup_data
+        matchup = Matchup(board_dimension, win_length, first_agent, second_agent, time_limit, win_percentage_threshold, enable_thread_protection)
+        matchup.play_n_games(num_games)
+        results_list.append(matchup)
 
     def play_parallel_matchups(self):
         with mp.Manager() as manager:
@@ -588,14 +742,15 @@ class MetaMatchup:
             for board_dimension in self.board_dimensions:
                 for win_length in self.win_lengths:
                     print(f"Playing matchup between {self.first_agent.name} and {self.second_agent.name}")
-                    matchup_data: Tuple[BoardDimension, int, Agent, Agent, int, float, int] = (
+                    matchup_data: Tuple[BoardDimension, int, Agent, Agent, int, float, int, bool] = (
                         board_dimension,
                         win_length,
                         self.first_agent,
                         self.second_agent,
                         self.turn_time_limit_s,
                         self.win_percentage_threshold_for_win,
-                        self.number_of_games_per_matchup
+                        self.number_of_games_per_matchup,
+                        self.enable_thread_protection
                     )
                     matchups_data.append(matchup_data)
             with mp.Pool(mp.cpu_count()) as pool:
@@ -700,7 +855,7 @@ class Tournament:
         self.agents_metamatchup_wins[NO_WINNER_STATE] = 0
         self.overall_winner: str = None
 
-    def play_tournament(self, file_dir: str = None):
+    def play_tournament(self, file_dir: str = None, enable_thread_protection: bool = True):
         for agent_1, agent_2 in itertools.combinations(self.agents, 2):
             print(f"Playing meta matchup between {agent_1.name} and {agent_2.name}")
             meta_matchup = MetaMatchup(
@@ -710,7 +865,8 @@ class Tournament:
                 agent_2,
                 self.turn_time_limit_s,
                 self.win_percentage_threshold_for_win,
-                self.number_of_games_per_matchup
+                self.number_of_games_per_matchup,
+                enable_thread_protection
             )
             meta_matchup.play_matchups()
             if file_dir is not None:

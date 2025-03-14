@@ -27,54 +27,16 @@ sam = Agent(inquisition.get_name(), inquisition.play)
 
 
 
-def play_one_meta_matchup(first_agent: Agent, second_agent: Agent):
-        # board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
-    board_dimensions = [BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6)]
-    # win_lengths = [4, 5]
-    win_lengths = [4]
-    meta_matchup: MetaMatchup = MetaMatchup(
-        board_dimensions,
-        win_lengths,
-        first_agent,
-        second_agent,
-        turn_time_limit_s=5,
-        win_percentage_threshold_for_win=10,
-        number_of_games_per_matchup=2
-    )
-    meta_matchup.play_matchups()
-    meta_matchup.generate_report("test.txt")
-    print("hello")
-
-##### TOURNAMENT #####
-def play_tournament():
-    agents = [threshold_heuritic, nathaniel, alex, sam]
-    board_dimensions = [
-        BoardDimension(7, 6) 
-    ]
-    win_lengths = [4]
-    tournament: Tournament = Tournament(
-        board_dimensions,
-        win_lengths,
-        agents,
-        turn_time_limit_s=5,
-        win_percentage_threshold_for_win=5,
-        number_of_games_per_matchup=10
-    )
-    tournament.play_tournament("competition/week_2/results")
-    tournament.generate_reports_in_dir("competition/week_2/results")
-
+def play_one_matchup(first_agent: Agent, second_agent: Agent):
+    visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
+    visual.play_real_time_game(first_agent.name, second_agent.name, first_agent.play, second_agent.play, 1, 2)
 
 
 
 
 
 if __name__ == "__main__":
-##### Generating the matchup ######
-    # play_tournament()
-    # play_one_meta_matchup()
-
-
-    play_one_meta_matchup(sam, threshold_heuritic)
+    play_one_matchup(sam, nathaniel)
     # visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
     # visual.play_multiple_real_time_games(nathaniel, threshold_heuritic, 5, 2, 5)
 

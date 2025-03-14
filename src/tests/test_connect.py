@@ -372,6 +372,24 @@ def random_agent_2(board, win_length, opponent_name):
     # Random agent that picks a random column
     return random.randint(0, board.shape[0] - 1)
 
+# Agent that raises an error after playing 2 moves
+def delayed_error_agent(board, win_length, opponent_name):
+    # Count how many pieces this agent has on the board
+    pieces_count = 0
+    for col in range(board.shape[0]):
+        for row in range(board.shape[1]):
+            if board[col][row] == "error_agent":
+                pieces_count += 1
+    
+    # Raise an error after playing 2 moves
+    if pieces_count >= 2:
+        raise ValueError("This agent fails after playing 2 moves!")
+    
+    # Otherwise play in first available column
+    for col in range(board.shape[0]):
+        if board[col][0] is None:
+            return col
+    return 0
 
 class TestConnectXMatchWithAgents:
     def test_play_move_with_agent(self):
@@ -448,77 +466,208 @@ class TestConnectXMatchWithAgents:
             5
         )
         assert match.play_full_game() == "agent_2"
+        
+    def test_agents_receive_final_state(self):
+        """Test that agents receive the final state after the game is finished."""
+        # Create counters to track how many times each agent is called
+        first_agent_calls = [0]
+        second_agent_calls = [0]
+        
+        # Create custom agents that count their calls
+        def first_agent_func(board, win_length, opponent_name):
+            first_agent_calls[0] += 1
+            return 0  # Always play first column
+            
+        def second_agent_func(board, win_length, opponent_name):
+            second_agent_calls[0] += 1
+            return board.shape[0] - 1  # Always play last column
+        
+        # Create a match with our custom agents
+        match = ConnectXMatchWithAgents(
+            7,  # columns
+            6,  # rows
+            4,  # win length
+            "Player1",
+            "Player2",
+            first_agent_func,
+            second_agent_func,
+            5,  # time limit
+            True  # enable thread protection
+        )
+        
+        # Record initial call counts
+        initial_first_calls = first_agent_calls[0]
+        initial_second_calls = second_agent_calls[0]
+        
+        # Play the game - first agent should win after 4 moves
+        winner = match.play_full_game()
+        
+        # Verify the winner
+        assert winner == "Player1"
+        
+        # Agents should be called during gameplay, plus one extra time each for the final state
+        # For a win after 4 columns, we expect 4 total moves (2 per player) plus the final state call
+        game_play_calls = first_agent_calls[0] - initial_first_calls
+        assert game_play_calls >= 3  # At least 2 for gameplay + 1 for final state
+        
+        game_play_calls = second_agent_calls[0] - initial_second_calls
+        assert game_play_calls >= 3  # At least 2 for gameplay + 1 for final state
+        
+        # Test with agents that raise exceptions when called with final state
+        def first_agent_error_func(board, win_length, opponent_name):
+            if match.game.game_state != GameState.IN_PROGRESS:
+                raise ValueError("Game already over!")
+            return 0
+            
+        def second_agent_error_func(board, win_length, opponent_name):
+            if match.game.game_state != GameState.IN_PROGRESS:
+                raise ValueError("Game already over!")
+            return board.shape[0] - 1
+        
+        # Create a new match with agents that raise errors on final state
+        error_match = ConnectXMatchWithAgents(
+            7, 6, 4, 
+            "ErrorPlayer1", "ErrorPlayer2",
+            first_agent_error_func, second_agent_error_func,
+            5, True
+        )
+        
+        # The game should still complete successfully despite the errors in final state calls
+        winner = error_match.play_full_game()
+        assert winner == "ErrorPlayer2"  # Game should still finish normally
 
+    def test_error_handling(self):
+        """Test that agent errors are properly handled during gameplay."""
+        
+        # Create an agent function that raises an exception
+        def error_agent(board, win_length, opponent_name):
+            raise ValueError("This agent always fails!")
+            
+        # Create a match with the error agent as first player
+        match = ConnectXMatchWithAgents(
+            7, 6, 4,
+            "ErrorPlayer", "NormalPlayer",
+            error_agent, agent_last_column,
+            5, True
+        )
+        
+        # The first move should fail and end the game
+        result = match.play_move_with_agent("ErrorPlayer")
+        
+        # Verify that the game ended with an agent error
+        assert result is False
+        assert match.game.game_state == GameState.AGENT_ERROR
+        assert match.game.winner == "NormalPlayer"
+        assert match.game.previous_player_who_played == "ErrorPlayer"
+        
+        # Check that the log contains an error message
+        assert any("caused an error" in log_entry for log_entry in match.game.log)
+        
+        # Test with thread protection disabled
+        match = ConnectXMatchWithAgents(
+            7, 6, 4,
+            "ErrorPlayer", "NormalPlayer",
+            error_agent, agent_last_column,
+            5, False  # Disable thread protection
+        )
+        
+        # The move should still fail
+        result = match.play_move_with_agent("ErrorPlayer")
+        assert result is False
+        assert match.game.game_state == GameState.AGENT_ERROR
+        
+        # Test error handling in full game
+        match = ConnectXMatchWithAgents(
+            7, 6, 4,
+            "ErrorPlayer", "NormalPlayer",
+            error_agent, agent_last_column,
+            5, True
+        )
+        
+        # The game should end with the normal player winning
+        winner = match.play_full_game()
+        assert winner == "NormalPlayer"
+        assert match.game.game_state == GameState.AGENT_ERROR
 
-
-
-
-
-class TestConnectXMatchup:
-    def test_play_matchup(self):
-        ### Player 1 wins
+    def test_error_handling_in_matchup(self):
+        """Test that agent errors are properly handled during matchup gameplay."""
         board_dim = BoardDimension(7, 6)
-        agent_1 = Agent("agent_1", agent_first_column)
-        agent_2 = Agent("agent_2", agent_empty)
-        matchup: Matchup = Matchup(
+        
+        # Create an agent that raises an error after a few moves
+        def delayed_error_agent(board, win_length, opponent_name):
+            # Count how many pieces this agent has on the board
+            pieces_count = 0
+            for col in range(board.shape[0]):
+                for row in range(board.shape[1]):
+                    if board[col][row] == "error_agent":
+                        pieces_count += 1
+            
+            # Raise an error after playing 2 moves
+            if pieces_count >= 2:
+                raise ValueError("This agent fails after playing 2 moves!")
+            
+            # Otherwise play in first available column
+            for col in range(board.shape[0]):
+                if board[col][0] is None:
+                    return col
+            return 0
+        
+        # Create agents for testing
+        error_agent = Agent("error_agent", delayed_error_agent)
+        normal_agent = Agent("normal_agent", agent_last_column)
+        
+        # Create matchup
+        matchup = Matchup(
             board_dim,
             4,
-            agent_1,
-            agent_2,
-            5,
-            10,
-            10
+            error_agent,
+            normal_agent,
+            5,  # time limit
+            10,  # win threshold
+            True  # enable thread protection
         )
-        # Before
-        assert matchup.first_player_wins == 0
-        assert matchup.second_player_wins == 0
-        assert matchup.draws == 0
-        assert matchup.percentage_first_player_wins is None
-        assert matchup.percentage_second_player_wins is None
-        assert matchup.percentage_draws is None
-        assert matchup.winner is None
-        # Play the matchup
-        matchup.play_matchup()
-        # After
-        assert matchup.first_player_wins == 10
-        assert matchup.second_player_wins == 0
-        assert matchup.draws == 0
-        assert matchup.percentage_first_player_wins == 100.0
-        assert matchup.percentage_second_player_wins == 0.0
-        assert matchup.percentage_draws == 0.0
-        assert matchup.winner == "agent_1"
-
-        ### Equal strats
-        board_dim = BoardDimension(7, 6)
-        agent_1 = Agent("agent_1", agent_first_column)
-        agent_2 = Agent("agent_2", agent_last_column)
-        matchup: Matchup = Matchup(
+        
+        # Play games sequentially instead of in parallel
+        matchup.play_n_games(5)
+        
+        # Normal agent should win due to error_agent failing
+        assert matchup.first_player_wins < 5
+        assert matchup.second_player_wins > 0
+        
+        # Check that some games are saved and have proper error state
+        if len(matchup.saved_player_2_games) > 0:
+            for game in matchup.saved_player_2_games:
+                if game.game_state == GameState.AGENT_ERROR:
+                    assert game.winner == "normal_agent"
+                    assert any("caused an error" in log_entry for log_entry in game.log)
+                    
+        # Test with thread protection disabled
+        matchup = Matchup(
             board_dim,
             4,
-            agent_1,
-            agent_2,
+            error_agent,
+            normal_agent,
             5,
             10,
-            10
+            False  # disable thread protection
         )
-        # Before
-        assert matchup.first_player_wins == 0
-        assert matchup.second_player_wins == 0
-        assert matchup.draws == 0
-        assert matchup.percentage_first_player_wins is None
-        assert matchup.percentage_second_player_wins is None
-        assert matchup.percentage_draws is None
-        assert matchup.winner is None
-        # Play the matchup
-        matchup.play_matchup()
-        # After
-        assert matchup.first_player_wins == 5
-        assert matchup.second_player_wins == 5
-        assert matchup.draws == 0
-        assert matchup.percentage_first_player_wins == 50.0
-        assert matchup.percentage_second_player_wins == 50.0
-        assert matchup.percentage_draws == 0.0
-        assert matchup.winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
+        
+        # Play games sequentially
+        matchup.play_n_games(5)
+        
+        # Normal agent should win some games due to error_agent failing
+        assert matchup.second_player_wins > 0
+        
+        # Check if any games with AGENT_ERROR state were saved
+        agent_error_games = 0
+        for game in matchup.saved_player_2_games:
+            if game.game_state == GameState.AGENT_ERROR:
+                agent_error_games += 1
+                assert game.winner == "normal_agent"
+                assert any("caused an error" in log_entry for log_entry in game.log)
+                
+        # We should have at least one game with agent error
+        assert agent_error_games > 0
 
     def test_generate_report(self):
         board_dim = BoardDimension(7, 6)
@@ -530,11 +679,10 @@ class TestConnectXMatchup:
             agent_1,
             agent_2,
             5,
-            10,
             10
         )
         # Play the matchup
-        matchup.play_matchup()
+        matchup.play_n_games(10)
         # Generate the report
         matchup.generate_report("test_report.txt")      
         # Check that the report exists
@@ -814,6 +962,341 @@ class TestConnectXVisual:
     #     agent_1: Agent = Agent("Agent1", agent_first_column)
     #     agent_2: Agent = Agent("Agent2", agent_last_column)
     #     visual.play_multiple_real_time_games(agent_1, agent_2, 1, 3, 10)
+
+class TestConnectXMatchup:
+    def test_play_matchup(self):
+        ### Player 1 wins
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_empty)
+        matchup: Matchup = Matchup(
+            board_dim,
+            4,
+            agent_1,
+            agent_2,
+            5,
+            10
+        )
+        # Before
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins is None
+        assert matchup.percentage_second_player_wins is None
+        assert matchup.percentage_draws is None
+        assert matchup.winner is None
+        # Play the matchup
+        matchup.play_n_games(10)
+        # After
+        assert matchup.first_player_wins == 10
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 100.0
+        assert matchup.percentage_second_player_wins == 0.0
+        assert matchup.percentage_draws == 0.0
+        assert matchup.winner == "agent_1"
+
+        ### Equal strats
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_last_column)
+        matchup: Matchup = Matchup(
+            board_dim,
+            4,
+            agent_1,
+            agent_2,
+            5,
+            10
+        )
+        # Before
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins is None
+        assert matchup.percentage_second_player_wins is None
+        assert matchup.percentage_draws is None
+        assert matchup.winner is None
+        # Play the matchup
+        matchup.play_n_games(10)
+        # After
+        assert matchup.first_player_wins == 5
+        assert matchup.second_player_wins == 5
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 50.0
+        assert matchup.percentage_second_player_wins == 50.0
+        assert matchup.percentage_draws == 0.0
+        assert matchup.winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
+
+    def test_play_single_game(self):
+        """Test the _play_single_game static method."""
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_empty)
+        win_length = 4
+        time_limit = 5
+        
+        # Test first agent starting
+        winner, game = Matchup._play_single_game(
+            game_index=0,
+            board_dimension=board_dim,
+            win_length=win_length,
+            first_agent=agent_1,
+            second_agent=agent_2,
+            time_limit=time_limit,
+            enable_thread_protection=True,
+            start_with_first_agent=True
+        )
+        
+        # agent_1 (agent_first_column) should win consistently
+        assert winner == "agent_1"
+        assert game.winner == "agent_1"
+        assert game.FIRST_PLAYER_NAME == "agent_1"
+        assert game.SECOND_PLAYER_NAME == "agent_2"
+        
+        # Test second agent starting
+        winner, game = Matchup._play_single_game(
+            game_index=1,
+            board_dimension=board_dim,
+            win_length=win_length,
+            first_agent=agent_1,
+            second_agent=agent_2,
+            time_limit=time_limit,
+            enable_thread_protection=True,
+            start_with_first_agent=False
+        )
+        
+        # agent_1 should still win but will be the second player this time
+        assert winner == "agent_1"
+        assert game.winner == "agent_1"
+        assert game.FIRST_PLAYER_NAME == "agent_2"
+        assert game.SECOND_PLAYER_NAME == "agent_1"
+        
+        # Test with thread protection disabled
+        winner, game = Matchup._play_single_game(
+            game_index=2,
+            board_dimension=board_dim,
+            win_length=win_length,
+            first_agent=agent_1,
+            second_agent=agent_2,
+            time_limit=time_limit,
+            enable_thread_protection=False,
+            start_with_first_agent=True
+        )
+        
+        # Should still work without thread protection
+        assert winner == "agent_1"
+        assert game.winner == "agent_1"
+
+    def test_play_n_games_with_parallelism(self):
+        """Test the play_n_games_with_parallelism method."""
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_empty)
+        matchup = Matchup(
+            board_dim,
+            4,
+            agent_1,
+            agent_2,
+            5,
+            10
+        )
+        
+        # Before playing any games
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        
+        # Play 10 games in parallel
+        matchup.play_n_games_with_parallelism(10, num_processes=2)
+        
+        # After playing games - agent_1 should win all of them (10 wins)
+        assert matchup.first_player_wins == 10
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 100.0
+        assert matchup.percentage_second_player_wins == 0.0
+        assert matchup.percentage_draws == 0.0
+        assert matchup.winner == "agent_1"
+        
+        # Verify game records are saved
+        assert len(matchup.saved_player_1_games) == 5  # Maximum 5 games are saved
+        assert len(matchup.saved_player_2_games) == 0
+        
+        # Play 5 more games - statistics should accumulate
+        matchup.play_n_games_with_parallelism(5, num_processes=2)
+        
+        # Now we should have 15 wins for agent_1
+        assert matchup.first_player_wins == 15
+        assert matchup.second_player_wins == 0
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 100.0
+        assert matchup.winner == "agent_1"
+        
+        # Test with equal strategies
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_last_column)
+        matchup = Matchup(
+            board_dim,
+            4,
+            agent_1,
+            agent_2,
+            5,
+            10
+        )
+        
+        # Play 10 games in parallel
+        matchup.play_n_games_with_parallelism(10, num_processes=2)
+        
+        # Agents should have roughly equal wins
+        assert matchup.first_player_wins == 5
+        assert matchup.second_player_wins == 5
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 50.0
+        assert matchup.percentage_second_player_wins == 50.0
+        assert matchup.percentage_draws == 0.0
+        assert matchup.winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
+        
+        # Play 10 more games - statistics should accumulate and not be reset
+        matchup.play_n_games_with_parallelism(10, num_processes=2)
+        
+        # Now we should have 20 games total
+        total_games = matchup.first_player_wins + matchup.second_player_wins + matchup.draws
+        assert total_games == 20
+        # Roughly 50/50 win split
+        assert abs(matchup.first_player_wins - matchup.second_player_wins) <= 2
+        assert matchup.winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
+        
+    def test_error_handling_in_matchup(self):
+        """Test that agent errors are properly handled during matchup gameplay."""
+        # Define a counter to track when to raise an error
+        error_counter = [0]
+        
+        # Create an agent that fails after a specific number of calls
+        def count_and_fail_agent(board, win_length, opponent_name):
+            error_counter[0] += 1
+            # Fail on the third call
+            if error_counter[0] >= 3:
+                raise ValueError("This agent fails after being called 3 times!")
+            return 0  # Always play in first column
+            
+        board_dim = BoardDimension(7, 6)
+        error_agent = Agent("error_agent", count_and_fail_agent)
+        normal_agent = Agent("normal_agent", agent_last_column)
+        
+        # Create matchup
+        matchup = Matchup(
+            board_dim,
+            4,
+            error_agent,
+            normal_agent,
+            5,  # time limit
+            10,  # win threshold
+            True  # enable thread protection
+        )
+        
+        # Play games sequentially instead of in parallel
+        matchup.play_n_games(5)
+        
+        # Normal agent should win due to error_agent failing
+        assert matchup.first_player_wins < 5
+        assert matchup.second_player_wins > 0
+        
+        # Check that some games are saved and have proper error state
+        if len(matchup.saved_player_2_games) > 0:
+            for game in matchup.saved_player_2_games:
+                if game.game_state == GameState.AGENT_ERROR:
+                    assert game.winner == "normal_agent"
+                    assert any("caused an error" in log_entry for log_entry in game.log)
+                    
+        # Test with thread protection disabled
+        error_counter[0] = 0  # Reset the counter
+        matchup = Matchup(
+            board_dim,
+            4,
+            error_agent,
+            normal_agent,
+            5,
+            10,
+            False  # disable thread protection
+        )
+        
+        # Play games sequentially
+        matchup.play_n_games(5)
+        
+        # Normal agent should win some games due to error_agent failing
+        assert matchup.second_player_wins > 0
+        
+        # Check if any games with AGENT_ERROR state were saved
+        agent_error_games = 0
+        for game in matchup.saved_player_2_games:
+            if game.game_state == GameState.AGENT_ERROR:
+                agent_error_games += 1
+                assert game.winner == "normal_agent"
+                assert any("caused an error" in log_entry for log_entry in game.log)
+                
+        # We should have at least one game with agent error
+        assert agent_error_games > 0
+
+    def test_error_handling_in_parallel_gameplay(self):
+        """Test that agent errors are properly handled during parallel gameplay."""
+        board_dim = BoardDimension(7, 6)
+        
+        # Create agents for testing - using the global delayed_error_agent function
+        error_agent = Agent("error_agent", delayed_error_agent)
+        normal_agent = Agent("normal_agent", agent_last_column)
+        
+        # Create matchup
+        matchup = Matchup(
+            board_dim,
+            4,
+            error_agent,
+            normal_agent,
+            5,
+            10,
+            True  # enable thread protection
+        )
+        
+        # Play games in parallel
+        matchup.play_n_games_with_parallelism(10, num_processes=2)
+        
+        # Normal agent should win all games due to error_agent failing
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 10
+        assert matchup.draws == 0
+        assert matchup.percentage_first_player_wins == 0.0
+        assert matchup.percentage_second_player_wins == 100.0
+        assert matchup.winner == "normal_agent"
+        
+        # Check that some games are saved
+        assert len(matchup.saved_player_1_games) == 0
+        assert len(matchup.saved_player_2_games) > 0
+        
+        # Verify that error messages are in the game logs
+        for game in matchup.saved_player_2_games:
+            assert any("caused an error" in log_entry for log_entry in game.log)
+            assert game.game_state == GameState.AGENT_ERROR
+            assert game.winner == "normal_agent"
+            
+        # Test with thread protection disabled
+        matchup = Matchup(
+            board_dim,
+            4,
+            error_agent,
+            normal_agent,
+            5,
+            10,
+            False  # disable thread protection
+        )
+        
+        # Play games in parallel
+        matchup.play_n_games_with_parallelism(10, num_processes=2)
+        
+        # Results should be the same without thread protection
+        assert matchup.first_player_wins == 0
+        assert matchup.second_player_wins == 10
+        assert matchup.draws == 0
+        assert matchup.winner == "normal_agent"
 
 if __name__ == "__main__":
     unittest.main()
