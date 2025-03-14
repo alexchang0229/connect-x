@@ -457,14 +457,14 @@ class TestConnectXMatchWithAgents:
 class TestConnectXMatchup:
     def test_play_matchup(self):
         ### Player 1 wins
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_empty)
         matchup: Matchup = Matchup(
-            7,
-            6,
+            board_dim,
             4,
-            "agent_1", 
-            "agent_2",
-            agent_first_column, 
-            agent_empty,
+            agent_1,
+            agent_2,
             5,
             10,
             10
@@ -489,14 +489,14 @@ class TestConnectXMatchup:
         assert matchup.winner == "agent_1"
 
         ### Equal strats
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_last_column)
         matchup: Matchup = Matchup(
-            7,
-            6,
+            board_dim,
             4,
-            "agent_1", 
-            "agent_2",
-            agent_first_column, 
-            agent_last_column,
+            agent_1,
+            agent_2,
             5,
             10,
             10
@@ -521,14 +521,14 @@ class TestConnectXMatchup:
         assert matchup.winner == 'NO CLEAR WINNER. The difference in win percentage is less than the threshold.'
 
     def test_generate_report(self):
+        board_dim = BoardDimension(7, 6)
+        agent_1 = Agent("agent_1", agent_first_column)
+        agent_2 = Agent("agent_2", agent_last_column)
         matchup: Matchup = Matchup(
-            7,
-            6,
+            board_dim,
             4,
-            "agent_1", 
-            "agent_2",
-            agent_first_column, 
-            agent_last_column,
+            agent_1,
+            agent_2,
             5,
             10,
             10

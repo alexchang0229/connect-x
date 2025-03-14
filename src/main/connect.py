@@ -375,27 +375,45 @@ class ConnectXMatchWithAgents:
 
 
 
-class Matchup:
+
+
+class BoardDimension:
     def __init__(
         self,
         columns: int,
         rows: int,
+    ):
+        self.columns: int = columns
+        self.rows: int = rows
+
+class Agent:
+    def __init__(
+        self,
+        name: str,
+        func: Callable
+    ):
+        self.name: str = name
+        self.func: Callable = func
+
+
+class Matchup:
+    def __init__(
+        self,
+        board_dimension: BoardDimension,
         win_length: int,
-        first_player_name: str,
-        second_player_name: str,
-        first_player_func: Callable,
-        second_player_func: Callable,
+        first_agent: Agent,
+        second_agent: Agent,
         time_limit: int,
         win_percentage_threshold_for_win: float,
         number_of_games: int
     ):
-        self.columns: int = columns
-        self.rows: int = rows
+        self.columns: int = board_dimension.columns
+        self.rows: int = board_dimension.rows
         self.win_length: int = win_length
-        self.first_player_name: str = first_player_name
-        self.second_player_name: str = second_player_name
-        self.first_player_func: Callable = first_player_func
-        self.second_player_func: Callable = second_player_func
+        self.first_player_name: str = first_agent.name
+        self.second_player_name: str = second_agent.name
+        self.first_player_func: Callable = first_agent.func
+        self.second_player_func: Callable = second_agent.func
         self.win_percentage_threshold_for_win: float = win_percentage_threshold_for_win
         self.time_limit: float = time_limit
         self.number_of_games: int = number_of_games
@@ -508,24 +526,6 @@ class Matchup:
 
 
 
-class BoardDimension:
-    def __init__(
-        self,
-        columns: int,
-        rows: int,
-    ):
-        self.columns: int = columns
-        self.rows: int = rows
-
-class Agent:
-    def __init__(
-        self,
-        name: str,
-        func: Callable
-    ):
-        self.name: str = name
-        self.func: Callable = func
-
 class MetaMatchup:
     def __init__(
         self,
@@ -563,13 +563,10 @@ class MetaMatchup:
         for board_dimension in self.board_dimensions:
             for win_length in self.win_lengths:
                 matchup = Matchup(
-                    board_dimension.columns,
-                    board_dimension.rows,
+                    board_dimension,
                     win_length,
-                    self.first_agent.name,
-                    self.second_agent.name,
-                    self.first_agent.func,
-                    self.second_agent.func,
+                    self.first_agent,
+                    self.second_agent,
                     self.turn_time_limit_s,
                     self.win_percentage_threshold_for_win,
                     self.number_of_games_per_matchup
@@ -578,7 +575,7 @@ class MetaMatchup:
                 self.matchups.append(matchup)
         self.analyse_matchups()
 
-    def play_matchup_in_process(matchup_data: Tuple[int, int, int, str, str, Callable, Callable, int, float, int], results_list: List[Matchup]):
+    def play_matchup_in_process(matchup_data: Tuple[BoardDimension, int, Agent, Agent, int, float, int], results_list: List[Matchup]):
             """Worker function to run play_matchup() and store results."""
             matchup = Matchup(*matchup_data)
             matchup.play_matchup()
@@ -591,14 +588,11 @@ class MetaMatchup:
             for board_dimension in self.board_dimensions:
                 for win_length in self.win_lengths:
                     print(f"Playing matchup between {self.first_agent.name} and {self.second_agent.name}")
-                    matchup_data: Tuple[int, int, int, str, str, Callable, Callable, int, float, int] = (
-                        board_dimension.columns,
-                        board_dimension.rows,
+                    matchup_data: Tuple[BoardDimension, int, Agent, Agent, int, float, int] = (
+                        board_dimension,
                         win_length,
-                        self.first_agent.name,
-                        self.second_agent.name,
-                        self.first_agent.func,
-                        self.second_agent.func,
+                        self.first_agent,
+                        self.second_agent,
                         self.turn_time_limit_s,
                         self.win_percentage_threshold_for_win,
                         self.number_of_games_per_matchup
