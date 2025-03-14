@@ -31,7 +31,10 @@ def get_winning_move(match: ConnectXMatch, player: str) -> int:
 def play_using_mcts(board: np.ndarray, length_to_win: int, opponent_name: str, time_limit: int) -> int:
     match: ConnectXMatch = get_match_object(board, length_to_win, "X", opponent_name)
     mcts_instance = mcts(timeLimit=time_limit)
-    bestAction = mcts_instance.search(initialState=match)
+    try:
+        bestAction = mcts_instance.search(initialState=match)
+    except:
+        bestAction = None
     return bestAction
 
 

@@ -317,13 +317,10 @@ class ConnectXMatchWithAgents:
         # Create a nested function to run the agent function
         column_answer = None
         def agent_move():
-            try:
-                nonlocal column_answer
-                board_copy: np.ndarray = copy.deepcopy(self.game.board)
-                opponent_name = self.game.get_other_player(player)
-                column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
-            except:
-                column_answer = None
+            nonlocal column_answer
+            board_copy: np.ndarray = copy.deepcopy(self.game.board)
+            opponent_name = self.game.get_other_player(player)
+            column_answer = func(board_copy, self.game.WIN_LENGTH, opponent_name)
 
         # Call the function in a thread
         func: Callable = self.first_player_func if player == self.game.FIRST_PLAYER_NAME else self.second_player_func
@@ -371,9 +368,6 @@ class ConnectXMatchWithAgents:
         """
         while self.game.game_state == GameState.IN_PROGRESS:
             self.play_move_with_next_agent()
-        if self.game.game_state in [GameState.WIN, GameState.DRAW, GameState.ILLEGAL_MOVE]:
-            self.first_player_func(self.game.board,self.game.WIN_LENGTH,self.first_player_name)
-            self.second_player_func(self.game.board,self.game.WIN_LENGTH,self.second_player_name)
         return self.game.winner
 
 
@@ -429,7 +423,8 @@ class Matchup:
         current_player_function: Callable = self.first_player_func
         opponent_player: str = self.second_player_name
         opponent_player_function: Callable = self.second_player_func
-        for _ in range(self.number_of_games):
+        for i in range(self.number_of_games):
+            print(f"Playing game: {i}")
             game = ConnectXMatchWithAgents(
                 self.columns,
                 self.rows,
@@ -723,7 +718,7 @@ class Tournament:
                 self.win_percentage_threshold_for_win,
                 self.number_of_games_per_matchup
             )
-            meta_matchup.play_parallel_matchups()
+            meta_matchup.play_matchups()
             if file_dir is not None:
                 # If the directory does not exist, create it.
                 if not os.path.exists(file_dir):

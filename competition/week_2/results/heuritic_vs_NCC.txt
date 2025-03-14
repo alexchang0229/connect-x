@@ -1,0 +1,39 @@
+Connect X Meta Matchup Report
+========================
+Agents:
+First Agent: heuritic
+Second Agent: NCC
+
+Results:
+Total Games: 10
+heuritic: 3 (30.0)
+NCC: 7 (70.0)
+Draws: 0 (0.0)
+
+Winner: NCC
+========================
+
+
+
+
+
+Matchups:
+
+Connect X Matchup Report
+========================
+Columns: 7
+Rows: 6
+Win Length: 4
+First Player: heuritic
+Second Player: NCC
+Number of Games: 10
+Time Limit: 5 seconds
+Win Percentage Threshold for Win: 5
+
+Results:
+First Player Wins: 3 (30.0)
+Second Player Wins: 7 (70.0)
+Draws: 0 (0.0)
+
+Winner: NCC
+========================

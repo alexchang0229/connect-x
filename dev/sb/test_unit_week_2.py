@@ -130,22 +130,22 @@ def random_agent_1(board, win_length, opponent_name):
 #     meta_matchup.play_matchups()
 #     print("hello")
 
-# def test_unit_mcts_stronger_players():
-#     # board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
-#     board_dimensions = [BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6)]
-#     # win_lengths = [4, 5]
-#     win_lengths = [4]
-#     first_agent = Agent("Faithful", play_using_mcts)
-#     second_agent = Agent("Heuritic", heuritic)
-#     meta_matchup: MetaMatchup = MetaMatchup(
-#         board_dimensions,
-#         win_lengths,
-#         first_agent,
-#         second_agent,
-#         turn_time_limit_s=5,
-#         win_percentage_threshold_for_win=10,
-#         number_of_games_per_matchup=1
-#     )
-#     meta_matchup.play_parallel_matchups()
-#     meta_matchup.generate_report("test.txt")
-#     print("hello")
+def test_unit_mcts_stronger_players():
+    # board_dimensions = [BoardDimension(7, 6), BoardDimension(8, 7)]
+    board_dimensions = [BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6), BoardDimension(7, 6)]
+    # win_lengths = [4, 5]
+    win_lengths = [4]
+    first_agent = Agent("Faithful", play_using_mcts)
+    second_agent = Agent("Heuritic", heuritic)
+    meta_matchup: MetaMatchup = MetaMatchup(
+        board_dimensions,
+        win_lengths,
+        first_agent,
+        second_agent,
+        turn_time_limit_s=5,
+        win_percentage_threshold_for_win=10,
+        number_of_games_per_matchup=1
+    )
+    meta_matchup.play_matchups()
+    meta_matchup.generate_report("test.txt")
+    print("hello")
