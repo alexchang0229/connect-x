@@ -37,6 +37,6 @@ def play_using_mcts(board: np.ndarray, length_to_win: int, opponent_name: str) -
 
 def play(board: np.ndarray, length_to_win: int, opponent_name: str) -> int:
     match: ConnectXMatch = get_match_object(board, length_to_win, "X", opponent_name)
-    mcts_instance = mcts(timeLimit=1000)
+    mcts_instance = mcts(timeLimit=2000)
     bestAction = mcts_instance.search(initialState=match)
     return bestAction

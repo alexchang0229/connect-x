@@ -1,5 +1,7 @@
 from src.main.connect import Matchup, ConnectXVisual, Agent, BoardDimension, MetaMatchup, Tournament
 import random
+import multiprocessing as mp
+import os
 
 
 
@@ -28,9 +30,52 @@ sam = Agent(inquisition.get_name(), inquisition.play)
 
 
 def play_one_matchup(first_agent: Agent, second_agent: Agent):
-    visual: ConnectXVisual = ConnectXVisual(7, 6, 4, 100, 100)
-    visual.play_real_time_game(first_agent.name, second_agent.name, first_agent.play, second_agent.play, 1, 2)
-
+    """
+    Play a matchup of 20 games in parallel between two agents and generate a report.
+    
+    Args:
+        first_agent (Agent): The first agent
+        second_agent (Agent): The second agent
+    """
+    print(f"Playing matchup between {first_agent.name} and {second_agent.name}...")
+    
+    # Create board dimensions and parameters
+    board_dim = BoardDimension(7, 6)  # Standard Connect 4 board size
+    win_length = 4
+    time_limit = 5  # 5 seconds per move
+    win_threshold = 10  # 10% threshold for declaring a winner
+    
+    # Create the matchup
+    matchup = Matchup(
+        board_dim,
+        win_length,
+        first_agent,
+        second_agent,
+        time_limit,
+        win_threshold
+    )
+    
+    # Play 20 games in parallel
+    # num_processes = mp.cpu_count()
+    # matchup.play_n_games_with_parallelism(20, num_processes=num_processes)
+    matchup.play_n_games(20)
+    
+    # Print results to console
+    print("\nMatchup Results:")
+    print(f"Games played: {matchup.first_player_wins + matchup.second_player_wins + matchup.draws}")
+    print(f"{first_agent.name} wins: {matchup.first_player_wins} ({matchup.percentage_first_player_wins:.1f}%)")
+    print(f"{second_agent.name} wins: {matchup.second_player_wins} ({matchup.percentage_second_player_wins:.1f}%)")
+    print(f"Draws: {matchup.draws} ({matchup.percentage_draws:.1f}%)")
+    print(f"Winner: {matchup.winner}")
+    
+    # Generate report file
+    report_dir = "competition/week_2/reports"
+    os.makedirs(report_dir, exist_ok=True)
+    report_path = f"{report_dir}/{first_agent.name}_vs_{second_agent.name}.txt"
+    matchup.generate_report(report_path)
+    print(f"\nReport saved to: {report_path}")
+    
+    return matchup
 
 
 
