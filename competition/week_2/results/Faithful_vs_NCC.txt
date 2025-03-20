@@ -11,8 +11,8 @@ Win Percentage Threshold for Win: 10
 
 Results:
 First Player Wins: 5 (25.0)
-Second Player Wins: 12 (60.0)
-Draws: 3 (15.0)
+Second Player Wins: 10 (50.0)
+Draws: 5 (25.0)
 
 Winner: NCC
 ========================

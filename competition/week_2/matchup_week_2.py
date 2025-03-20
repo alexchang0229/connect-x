@@ -69,7 +69,7 @@ def play_one_matchup(first_agent: Agent, second_agent: Agent):
     print(f"Winner: {matchup.winner}")
     
     # Generate report file
-    report_dir = "competition/week_2/reports"
+    report_dir = "competition/week_2/results"
     os.makedirs(report_dir, exist_ok=True)
     report_path = f"{report_dir}/{first_agent.name}_vs_{second_agent.name}.txt"
     matchup.generate_report(report_path)
